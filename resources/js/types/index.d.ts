@@ -2,7 +2,15 @@ import { InertiaLinkProps } from '@inertiajs/vue3';
 import type { LucideIcon } from 'lucide-vue-next';
 
 export interface Auth {
-    user: User;
+    user: User | null;
+    roles: string[];
+    permissions: string[];
+    can?: {
+        viewStaff?: boolean;
+        manageUsers?: boolean;
+        manageRoles?: boolean;
+        [key: string]: boolean | undefined;
+    };
 }
 
 export interface BreadcrumbItem {
@@ -24,6 +32,7 @@ export type AppPageProps<
     quote: { message: string; author: string };
     auth: Auth;
     sidebarOpen: boolean;
+    breadcrumbs?: BreadcrumbItem[];
 };
 
 export interface User {

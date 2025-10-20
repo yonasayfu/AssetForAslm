@@ -24,33 +24,33 @@
   _Source_: `ARCHITECTURE.md`, `Development_Guides.md`
 
 ### Phase 1 – Application Shell and Styling
-- [ ] Port dual-layout concept (auth vs dashboard) with glass-themed header and sidebar.  
+- [x] Port dual-layout concept (auth vs dashboard) with glass-themed header and sidebar.  
   _Source_: layout files, `UI_and_Templates.md`, `MyNewAppsidebar.md`
-- [ ] Migrate liquid glass CSS utilities and Tailwind config tweaks.  
+- [x] Migrate liquid glass CSS utilities and Tailwind config tweaks.  
   _Source_: Geraye `resources/css/app.css`
-- [ ] Rebuild shared Vue components used across modules (`GlassCard`, `GlassButton`, modal, tabs, breadcrumbs, empty-state).  
+- [x] Rebuild shared Vue components used across modules (`GlassCard`, `GlassButton`, modal, tabs, breadcrumbs, empty-state).  
   _Source_: `UI_and_Templates.md`, component library in Geraye
-- [ ] Install notification toast component and confirmation modal patterns.  
+- [x] Install notification toast component and confirmation modal patterns.  
   _Source_: Geraye `Toast.vue`, `NotificationBell.vue`
 
 ### Phase 2 – Identity, Staff, and RBAC
-- [ ] Scaffold `Staff` module (model, migration, CRUD, Inertia pages, validation, policies).  
+- [x] Scaffold `Staff` module (model, migration, CRUD, Inertia pages, validation, policies).  
   _Source_: Geraye Staff module
-- [ ] Recreate user management screens (user CRUD, password reset flows, profile settings).  
+- [x] Recreate user management screens (user CRUD, password reset flows, profile settings).  
   _Source_: `ACCOUNT_POLICY_AND_FLOWS.md`
-- [ ] Integrate Spatie Permission with seed roles tailored to the Asset project (`Admin`, `Manager`, `Technician`, `Staff`, `Auditor`, `ReadOnly`).  
+- [x] Integrate Spatie Permission with seed roles tailored to the Asset project (`Admin`, `Manager`, `Technician`, `Staff`, `Auditor`, `ReadOnly`).  
   _Source_: `RBAC_AND_UI_CONSISTENCY_GUIDE.md`, `RBAC_ROLE_ACCESS_MATRIX.md`
-- [ ] Apply middleware plus frontend guards (route middleware, `PermissionGuard` component).  
+- [x] Apply middleware plus frontend guards (route middleware, `PermissionGuard` component).  
   _Source_: Geraye middleware, `PermissionGuard.vue`
-- [ ] Add audit logging for user and staff actions.  
+- [x] Add audit logging for user and staff actions.  
   _Source_: activity log traits in Geraye
 
 ### Phase 3 – Search, Filters, and Navigation UX
-- [ ] Implement `useTableFilters` composable and reusable filter components for list pages.  
+- [x] Implement `useTableFilters` composable and reusable filter components for list pages.  
   _Source_: `SEARCH.md`
-- [ ] Build global search modal overlay with asset-aware providers (Users, Staff, Assets placeholder).  
+- [x] Build global search modal overlay with asset-aware providers (Users, Staff, Assets placeholder).  
   _Source_: `GlobalSearch.vue`
-- [ ] Ensure paginated lists share consistent columns, empty states, and bulk action hooks.  
+- [x] Ensure paginated lists share consistent columns, empty states, and bulk action hooks.  
   _Source_: Geraye list views in `resources/js/Pages/*/Index.vue`
 
 ### Phase 4 – Export, Print, and File Handling
@@ -121,3 +121,4 @@
 - Align on branding copy for login and dashboard while keeping layout identical.
 
 Update this section as new blockers or questions emerge so the team can resolve them quickly.
+

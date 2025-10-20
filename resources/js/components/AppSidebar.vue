@@ -13,17 +13,71 @@ import {
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
 import { type NavItem } from '@/types';
-import { Link } from '@inertiajs/vue3';
-import { BookOpen, Folder, LayoutGrid } from 'lucide-vue-next';
+import { Link, usePage } from '@inertiajs/vue3';
+import { BookOpen, Folder, LayoutGrid, Shield, UserCog, Users } from 'lucide-vue-next';
+import { computed } from 'vue';
 import AppLogo from './AppLogo.vue';
 
-const mainNavItems: NavItem[] = [
-    {
-        title: 'Dashboard',
-        href: dashboard(),
-        icon: LayoutGrid,
-    },
-];
+const page = usePage<{
+    auth: {
+        permissions: string[];
+    };
+}>();
+
+const mainNavItems = computed<NavItem[]>(() => {
+    const auth = page.props.auth ?? {};
+
+    const items: NavItem[] = [
+        {
+            title: 'Dashboard',
+            href: dashboard(),
+            icon: LayoutGrid,
+        },
+    ];
+
+    const canViewStaff =
+        auth.can?.viewStaff ??
+        auth.permissions?.includes?.('staff.view') ??
+        false;
+
+    if (canViewStaff) {
+        items.push({
+            title: 'Staff',
+            href: '/staff',
+            icon: Users,
+        });
+    }
+
+    const canManageUsers =
+        auth.can?.manageUsers ??
+        auth.permissions?.includes?.('users.manage') ??
+        false;
+
+    if (canManageUsers) {
+        items.push({
+            title: 'Users',
+            href: '/users',
+            icon: UserCog,
+        });
+    }
+
+    const canManageRoles =
+        auth.can?.manageRoles ??
+        auth.permissions?.includes?.('roles.manage') ??
+        auth.permissions?.includes?.('users.manage') ??
+        false;
+
+    if (canManageRoles) {
+        items.push({
+            title: 'Roles',
+            href: '/roles',
+            icon: Shield,
+        });
+    }
+
+    return items;
+    
+});
 
 const footerNavItems: NavItem[] = [
     {
@@ -40,7 +94,7 @@ const footerNavItems: NavItem[] = [
 </script>
 
 <template>
-    <Sidebar collapsible="icon" variant="inset">
+    <Sidebar collapsible="icon" variant="inset" class="app-sidebar">
         <SidebarHeader>
             <SidebarMenu>
                 <SidebarMenuItem>

@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import Breadcrumbs from '@/components/Breadcrumbs.vue';
+import GlassCard from '@/components/GlassCard.vue';
+import GlobalSearch from '@/components/GlobalSearch.vue';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import type { BreadcrumbItemType } from '@/types';
+import { computed } from 'vue';
 
-withDefaults(
+const props = withDefaults(
     defineProps<{
         breadcrumbs?: BreadcrumbItemType[];
     }>(),
@@ -11,17 +14,33 @@ withDefaults(
         breadcrumbs: () => [],
     },
 );
+
+const showBreadcrumbs = computed(
+    () => props.breadcrumbs && props.breadcrumbs.length > 0,
+);
+
 </script>
 
 <template>
-    <header
-        class="flex h-16 shrink-0 items-center gap-2 border-b border-sidebar-border/70 px-6 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 md:px-4"
-    >
-        <div class="flex items-center gap-2">
-            <SidebarTrigger class="-ml-1" />
-            <template v-if="breadcrumbs && breadcrumbs.length > 0">
-                <Breadcrumbs :breadcrumbs="breadcrumbs" />
-            </template>
-        </div>
-    </header>
+    <div class="sticky top-0 z-30">
+        <GlassCard
+            as="header"
+            variant="lite"
+            padding="px-4 py-3 sm:px-6"
+            content-class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+            class="shadow-none"
+        >
+            <div class="flex items-center gap-3">
+                <SidebarTrigger class="btn-glass btn-glass-sm -ml-1" />
+                <Breadcrumbs v-if="showBreadcrumbs" :breadcrumbs="breadcrumbs" />
+            </div>
+
+            <div class="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
+                <div class="w-full max-w-sm sm:w-auto">
+                    <GlobalSearch />
+                </div>
+                <slot name="actions" />
+            </div>
+        </GlassCard>
+    </div>
 </template>

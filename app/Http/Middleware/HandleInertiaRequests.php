@@ -44,6 +44,19 @@ class HandleInertiaRequests extends Middleware
             'quote' => ['message' => trim($message), 'author' => trim($author)],
             'auth' => [
                 'user' => $request->user(),
+                'roles' => $request->user()
+                    ? $request->user()->getRoleNames()->values()->toArray()
+                    : [],
+                'permissions' => $request->user()
+                    ? $request->user()->getAllPermissions()->pluck('name')->values()->toArray()
+                    : [],
+                'can' => [
+                    'viewStaff' => $request->user()?->can('staff.view') ?? false,
+                    'manageUsers' => $request->user()?->can('users.manage') ?? false,
+                    'manageRoles' => $request->user()
+                        ? ($request->user()->can('roles.manage') || $request->user()->can('users.manage'))
+                        : false,
+                ],
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
