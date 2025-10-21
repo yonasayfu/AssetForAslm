@@ -99,16 +99,12 @@ const destroyUser = async () => {
                 </div>
 
                 <div class="flex items-center gap-2">
-                    <GlassButton
-                        size="sm"
-                        class="bg-slate-200/80 text-slate-700 hover:bg-slate-300 dark:bg-slate-800/60 dark:text-slate-200"
-                        as="span"
-                    >
-                        <Link href="/users">Back to list</Link>
+                    <GlassButton size="sm" variant="secondary" as="span">
+                        <Link href="/users" class="flex items-center gap-2">Back to list</Link>
                     </GlassButton>
                     <GlassButton
                         size="sm"
-                        class="bg-red-500/15 text-red-600 hover:bg-red-500/25 dark:bg-red-500/20 dark:text-red-200"
+                        variant="danger"
                         type="button"
                         @click="destroyUser"
                     >
@@ -128,7 +124,7 @@ const destroyUser = async () => {
             />
 
             <div class="flex justify-end">
-                <GlassButton type="submit" :disabled="!canSubmit">
+                <GlassButton type="submit" :disabled="!canSubmit" variant="primary">
                     <span v-if="form.processing">Saving...</span>
                     <span v-else>Update user</span>
                 </GlassButton>

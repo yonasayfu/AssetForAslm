@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
 import ActivityTimeline from '@/components/ActivityTimeline.vue';
+import FileUploadField from '@/components/FileUploadField.vue';
 import GlassButton from '@/components/GlassButton.vue';
 import GlassCard from '@/components/GlassCard.vue';
 import InputError from '@/components/InputError.vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
+import { ref } from 'vue';
 
 type ActivityEntry = {
     id: number | string;
@@ -32,6 +34,12 @@ const props = defineProps<{
         job_title: string | null;
         status: 'active' | 'inactive';
         hire_date: string | null;
+        avatar_url?: string | null;
+
+
+        avatar_label?: string | null;
+
+
     };
     activity: ActivityEntry[];
 }>();
@@ -45,10 +53,30 @@ const form = useForm({
     status: props.staff.status,
     hire_date: props.staff.hire_date ?? '',
     user_id: null as number | null,
+    avatar: null as File | null,
+    remove_avatar: false,
 });
 
+const existingAvatarUrl = ref<string | null>(props.staff.avatar_url ?? null);
+const existingAvatarLabel = ref<string | null>(props.staff.avatar_label ?? null);
+
+const updateAvatar = (file: File | null) => {
+    form.avatar = file;
+
+    if (file) {
+        form.remove_avatar = false;
+    }
+};
+
+const clearExistingAvatar = () => {
+    existingAvatarUrl.value = null;
+    existingAvatarLabel.value = null;
+    form.avatar = null;
+    form.remove_avatar = true;
+};
+
 const submit = () => {
-    form.put(`/staff/${props.staff.id}`);
+    form.put(`/staff/${props.staff.id}`, { forceFormData: true });
 };
 </script>
 
@@ -155,17 +183,32 @@ const submit = () => {
                             />
                             <InputError :message="form.errors.hire_date" class="mt-2" />
                         </div>
-                    </div>
+                </div>
+            </div>
+
+                <div>
+                    <FileUploadField
+                        label="Profile photo"
+                        hint="Images are stored under storage/app/public/staff/avatars."
+                        accept="image/*"
+                        variant="image"
+                        :model-value="form.avatar"
+                        :existing-url="existingAvatarUrl"
+                        :existing-label="existingAvatarLabel"
+                        @update:modelValue="updateAvatar"
+                        @clear-existing="clearExistingAvatar"
+                    />
+                    <InputError :message="form.errors.avatar" class="mt-2" />
                 </div>
 
                 <div class="flex items-center justify-end gap-2 pt-2">
                     <GlassButton
                         size="sm"
-                        class="bg-slate-200/80 text-slate-700 hover:bg-slate-300 dark:bg-slate-800/60 dark:text-slate-200"
+                        variant="secondary"
                     >
-                        <Link href="/staff">Cancel</Link>
+                        <Link href="/staff" class="flex items-center gap-2">Cancel</Link>
                     </GlassButton>
-                    <GlassButton size="sm" type="submit" :disabled="form.processing">
+                    <GlassButton size="sm" type="submit" :disabled="form.processing" variant="primary">
                         Save changes
                     </GlassButton>
                 </div>

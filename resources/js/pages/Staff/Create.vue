@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
+import FileUploadField from '@/components/FileUploadField.vue';
 import GlassButton from '@/components/GlassButton.vue';
 import GlassCard from '@/components/GlassCard.vue';
 import InputError from '@/components/InputError.vue';
@@ -14,10 +15,11 @@ const form = useForm({
     status: 'active',
     hire_date: '',
     user_id: null as number | null,
+    avatar: null as File | null,
 });
 
 const submit = () => {
-    form.post('/staff');
+    form.post('/staff', { forceFormData: true });
 };
 </script>
 
@@ -131,14 +133,29 @@ const submit = () => {
                     </div>
                 </div>
 
+                <div>
+                    <FileUploadField
+                        label="Profile photo"
+                        hint="Images are stored under storage/app/public/staff/avatars."
+                        accept="image/*"
+                        variant="image"
+                        :model-value="form.avatar"
+                        @update:modelValue="(file) => (form.avatar = file)"
+                        @clear-existing="() => {}"
+                    />
+                    <InputError :message="form.errors.avatar" class="mt-2" />
+                </div>
+
                 <div class="flex items-center justify-end gap-2 pt-2">
                     <GlassButton
                         size="sm"
-                        class="bg-slate-200/80 text-slate-700 hover:bg-slate-300 dark:bg-slate-800/60 dark:text-slate-200"
+                        variant="secondary"
                     >
-                        <Link href="/staff">Cancel</Link>
+                        <Link href="/staff" class="flex items-center gap-2">
+                            Cancel
+                        </Link>
                     </GlassButton>
-                    <GlassButton size="sm" type="submit" :disabled="form.processing">
+                    <GlassButton size="sm" type="submit" :disabled="form.processing" variant="primary">
                         Save
                     </GlassButton>
                 </div>

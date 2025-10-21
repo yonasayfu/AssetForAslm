@@ -24,6 +24,8 @@ class StaffUpdateRequest extends FormRequest
             'status' => ['required', 'in:active,inactive'],
             'hire_date' => ['nullable', 'date'],
             'user_id' => ['nullable', 'exists:users,id'],
+            'avatar' => ['nullable', 'image', 'max:5120'],
+            'remove_avatar' => ['nullable', 'boolean'],
         ];
     }
 }

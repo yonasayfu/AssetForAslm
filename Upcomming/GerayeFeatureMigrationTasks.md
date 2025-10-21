@@ -54,17 +54,17 @@
   _Source_: Geraye list views in `resources/js/Pages/*/Index.vue`
 
 ### Phase 4 – Export, Print, and File Handling
-- [ ] Port `ExportableTrait`, export jobs/queues, and download center UI.  
+- [x] Port `ExportableTrait`, export jobs/queues, and download center UI.  
   _Source_: Geraye export services, `PRINT_*` docs
-- [ ] Recreate unified print layout (Blade plus Vue) with per-module configuration.  
+- [x] Recreate unified print layout (Blade plus Vue) with per-module configuration.  
   _Source_: `PrintableReport.vue`, `pdf-layout.blade.php`
-- [ ] Implement document and image upload components with storage policies and preview modals.  
+- [x] Implement document and image upload components with storage policies and preview modals.  
   _Source_: `STORAGE.md`, document gallery components
-- [ ] Restore central storage structure rules (per-module folders, retention schedule).  
+- [x] Restore central storage structure rules (per-module folders, retention schedule).  
   _Source_: `STORAGE.md`
 
-### Phase 5 – Notifications and Alerting
-- [ ] Adapt notification center (database notifications, unread badge, real-time updates).  
+### Phase 5 - Notifications and Alerting
+- [x] Adapt notification center (database notifications, unread badge, real-time updates).  
   _Source_: `GERAYE-ORGANIZED.md`, notification components
 - [ ] Configure email notifications (alerts, password resets) and document testing steps.  
   _Source_: `EMAIL_TESTING_GUIDE.md`

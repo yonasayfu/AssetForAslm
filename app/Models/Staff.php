@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Support\Facades\Storage;
 
 class Staff extends Model
 {
@@ -24,6 +25,7 @@ class Staff extends Model
         'status',
         'hire_date',
         'user_id',
+        'avatar_path',
     ];
 
     protected $casts = [
@@ -32,6 +34,7 @@ class Staff extends Model
 
     protected $appends = [
         'full_name',
+        'avatar_url',
     ];
 
     protected string $activityLogLabel = 'Staff';
@@ -45,6 +48,7 @@ class Staff extends Model
         'status',
         'hire_date',
         'user_id',
+        'avatar_path',
     ];
 
     public function user(): BelongsTo
@@ -60,5 +64,14 @@ class Staff extends Model
     public function getFullNameAttribute(): string
     {
         return trim("{$this->first_name} {$this->last_name}");
+    }
+
+    public function getAvatarUrlAttribute(): ?string
+    {
+        if (! $this->avatar_path) {
+            return null;
+        }
+
+        return Storage::disk('public')->url($this->avatar_path);
     }
 }

@@ -6,6 +6,11 @@ use App\Http\Requests\StaffStoreRequest;
 use App\Http\Requests\StaffUpdateRequest;
 use App\Http\Resources\ActivityLogResource;
 use App\Models\Staff;
+use App\Support\Exports\ExportConfig;
+use App\Support\Exports\HandlesDataExport;
+use App\Support\Storage\StoragePath;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -13,38 +18,25 @@ use Inertia\Response;
 
 class StaffController extends Controller
 {
+    use HandlesDataExport;
+
     public function index(Request $request): Response
     {
         $search = trim((string) $request->query('search', ''));
-        $status = $request->query('status');
         $sort = $request->query('sort');
-        $direction = $request->query('direction', 'asc');
-        $perPage = $request->integer('per_page', 10);
+        $direction = $request->query('direction', 'asc') === 'desc' ? 'desc' : 'asc';
+        $allowedPerPage = [5, 10, 25, 50, 100];
+        $perPage = $request->integer('per_page', 5);
+        if (! in_array($perPage, $allowedPerPage, true)) {
+            $perPage = 5;
+        }
+        $status = $this->extractStatusFilter($request);
 
         $query = Staff::query()->with('user:id,name,email');
 
-        if ($search !== '') {
-            $query->where(function ($builder) use ($search) {
-                $builder
-                    ->where('first_name', 'like', "%{$search}%")
-                    ->orWhere('last_name', 'like', "%{$search}%")
-                    ->orWhere('email', 'like', "%{$search}%")
-                    ->orWhere('job_title', 'like', "%{$search}%");
-            });
-        }
-
-        if ($status && in_array($status, ['active', 'inactive'], true)) {
-            $query->where('status', $status);
-        } else {
-            $status = null;
-        }
-
-        $sortable = ['first_name', 'last_name', 'email', 'status', 'hire_date'];
-        if ($sort && in_array($sort, $sortable, true)) {
-            $query->orderBy($sort, $direction === 'desc' ? 'desc' : 'asc');
-        } else {
-            $query->orderBy('last_name')->orderBy('first_name');
-        }
+        $this->applyFilters($query, $request);
+        $this->applySearch($query, $search);
+        $this->applySorting($query, $request);
 
         $staff = $query
             ->paginate($perPage)
@@ -58,6 +50,7 @@ class StaffController extends Controller
                 'phone' => $staff->phone,
                 'job_title' => $staff->job_title,
                 'status' => $staff->status,
+                'avatar_url' => $staff->avatar_url,
                 'user' => $staff->user ? [
                     'id' => $staff->user->id,
                     'name' => $staff->user->name,
@@ -104,6 +97,15 @@ class StaffController extends Controller
             'breadcrumbs' => [
                 ['title' => 'Staff', 'href' => route('staff.index')],
             ],
+            'print' => (bool) $request->boolean('print'),
+        ]);
+    }
+
+    public function export(Request $request)
+    {
+        return $this->handleExport($request, Staff::class, ExportConfig::staff(), [
+            'label' => 'Staff Directory',
+            'type' => 'staff',
         ]);
     }
 
@@ -119,11 +121,60 @@ class StaffController extends Controller
         ]);
     }
 
+    public function show(Request $request, Staff $staff): Response
+    {
+        $this->authorize('view', $staff);
+
+        $staff->load('user:id,name,email');
+
+        $activity = $staff->activityLogs()
+            ->with('causer')
+            ->latest()
+            ->take(20)
+            ->get();
+
+        return Inertia::render('Staff/Show', [
+            'staff' => [
+                'id' => $staff->id,
+                'full_name' => $staff->full_name,
+                'first_name' => $staff->first_name,
+                'last_name' => $staff->last_name,
+                'email' => $staff->email,
+                'phone' => $staff->phone,
+                'job_title' => $staff->job_title,
+                'status' => $staff->status,
+                'hire_date' => optional($staff->hire_date)->toDateString(),
+                'avatar_url' => $staff->avatar_url,
+                'avatar_label' => $staff->avatar_path ? basename($staff->avatar_path) : null,
+                'user' => $staff->user ? [
+                    'id' => $staff->user->id,
+                    'name' => $staff->user->name,
+                    'email' => $staff->user->email,
+                ] : null,
+            ],
+            'activity' => ActivityLogResource::collection($activity),
+            'breadcrumbs' => [
+                ['title' => 'Staff', 'href' => route('staff.index')],
+                ['title' => $staff->full_name ?: $staff->first_name, 'href' => route('staff.show', $staff)],
+            ],
+            'print' => (bool) $request->boolean('print'),
+        ]);
+    }
+
     public function store(StaffStoreRequest $request): RedirectResponse
     {
         $this->authorize('create', Staff::class);
 
-        Staff::create($request->validated());
+        $data = $request->safe()->except(['avatar']);
+
+        if ($request->hasFile('avatar')) {
+            $data['avatar_path'] = $request->file('avatar')->store(
+                StoragePath::staffAvatars(),
+                'public'
+            );
+        }
+
+        Staff::create($data);
 
         return redirect()
             ->route('staff.index')
@@ -154,6 +205,8 @@ class StaffController extends Controller
                 'job_title' => $staff->job_title,
                 'status' => $staff->status,
                 'hire_date' => optional($staff->hire_date)->toDateString(),
+                'avatar_url' => $staff->avatar_url,
+                'avatar_label' => $staff->avatar_path ? basename($staff->avatar_path) : null,
             ],
             'activity' => ActivityLogResource::collection($activity),
             'breadcrumbs' => [
@@ -167,7 +220,26 @@ class StaffController extends Controller
     {
         $this->authorize('update', $staff);
 
-        $staff->update($request->validated());
+        $data = $request->safe()->except(['avatar', 'remove_avatar']);
+
+        if ($request->hasFile('avatar')) {
+            if ($staff->avatar_path) {
+                Storage::disk('public')->delete($staff->avatar_path);
+            }
+
+            $data['avatar_path'] = $request->file('avatar')->store(
+                StoragePath::staffAvatars(),
+                'public'
+            );
+        } elseif ($request->boolean('remove_avatar')) {
+            if ($staff->avatar_path) {
+                Storage::disk('public')->delete($staff->avatar_path);
+            }
+
+            $data['avatar_path'] = null;
+        }
+
+        $staff->update($data);
 
         return redirect()
             ->route('staff.index')
@@ -179,6 +251,10 @@ class StaffController extends Controller
     {
         $this->authorize('delete', $staff);
 
+        if ($staff->avatar_path) {
+            Storage::disk('public')->delete($staff->avatar_path);
+        }
+
         $staff->delete();
 
         return redirect()
@@ -186,4 +262,53 @@ class StaffController extends Controller
             ->with('bannerStyle', 'info')
             ->with('banner', 'Staff member removed.');
     }
+
+    protected function applyFilters(Builder $query, Request $request): void
+    {
+        $status = $this->extractStatusFilter($request);
+
+        if ($status) {
+            $query->where('status', $status);
+        }
+    }
+
+    protected function applySearch(Builder $query, ?string $search): void
+    {
+        $term = trim((string) $search);
+
+        if ($term === '') {
+            return;
+        }
+
+        $query->where(function (Builder $builder) use ($term) {
+            $builder
+                ->where('first_name', 'like', "%{$term}%")
+                ->orWhere('last_name', 'like', "%{$term}%")
+                ->orWhere('email', 'like', "%{$term}%")
+                ->orWhere('job_title', 'like', "%{$term}%");
+        });
+    }
+
+    protected function applySorting(Builder $query, Request $request): void
+    {
+        $sort = $request->query('sort');
+        $direction = $request->query('direction', 'asc') === 'desc' ? 'desc' : 'asc';
+        $sortable = ['first_name', 'last_name', 'email', 'status', 'hire_date'];
+
+        if ($sort && in_array($sort, $sortable, true)) {
+            $query->orderBy($sort, $direction);
+
+            return;
+        }
+
+        $query->orderBy('last_name')->orderBy('first_name');
+    }
+
+    protected function extractStatusFilter(Request $request): ?string
+    {
+        $status = $request->query('status');
+
+        return in_array($status, ['active', 'inactive'], true) ? $status : null;
+    }
 }
+

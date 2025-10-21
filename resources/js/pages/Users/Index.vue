@@ -1,13 +1,13 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
-import GlassButton from '@/components/GlassButton.vue';
 import GlassCard from '@/components/GlassCard.vue';
 import Pagination from '@/components/Pagination.vue';
+import ResourceToolbar from '@/components/ResourceToolbar.vue';
 import { confirmDialog } from '@/lib/confirm';
 import { useTableFilters } from '@/composables/useTableFilters';
 import { Head, Link, router } from '@inertiajs/vue3';
-import { Search } from 'lucide-vue-next';
-import { computed } from 'vue';
+import { Edit3, Eye, Search, Trash2 } from 'lucide-vue-next';
+import { computed, onBeforeUnmount, onMounted } from 'vue';
 
 interface UserSummary {
     id: number;
@@ -55,22 +55,93 @@ const props = defineProps<{
         edit: boolean;
         delete: boolean;
     };
+    print?: boolean;
 }>();
 
 const tableFilters = useTableFilters({
     route: '/users',
     initial: {
         search: props.filters?.search ?? '',
-        per_page: props.filters?.per_page ?? 10,
+        per_page: props.filters?.per_page ?? 5,
     },
 });
 
 const { search, perPage } = tableFilters;
 
+const printMode = computed(() => props.print ?? false);
+let printTimer: number | undefined;
+
+const printDocumentTitle = 'Asset Management - User Directory';
+const printTimestamp = new Intl.DateTimeFormat(undefined, {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+}).format(new Date());
+
+const triggerPrint = () => {
+    const originalTitle = document.title;
+    document.title = printDocumentTitle;
+    window.print();
+    document.title = originalTitle;
+};
+
+const closeAfterPrint = () => {
+    if (printMode.value && window.opener && !window.opener.closed) {
+        window.close();
+    }
+};
+
+onMounted(() => {
+    if (printMode.value) {
+        printTimer = window.setTimeout(() => {
+            triggerPrint();
+        }, 150);
+        window.addEventListener('afterprint', closeAfterPrint);
+    }
+});
+
+onBeforeUnmount(() => {
+    if (printTimer) {
+        window.clearTimeout(printTimer);
+    }
+
+    window.removeEventListener('afterprint', closeAfterPrint);
+});
+
+const buildQueryString = (extra: Record<string, unknown> = {}) => {
+    const params = new URLSearchParams();
+
+    if (search.value) {
+        params.set('search', search.value);
+    }
+
+    params.set('per_page', String(perPage.value));
+
+    Object.entries(extra).forEach(([key, value]) => {
+        if (value === undefined || value === null || value === '') {
+            return;
+        }
+
+        params.set(key, String(value));
+    });
+
+    const query = params.toString();
+
+    return query ? `?${query}` : '';
+};
+
 const users = computed<UserSummary[]>(() => props.users?.data ?? []);
 const stats = computed<StatCard[]>(() => props.stats ?? []);
 const hasResults = computed<boolean>(() => users.value.length > 0);
 const paginationLinks = computed(() => props.users?.links ?? []);
+
+const exportCsv = () => {
+    const query = buildQueryString();
+    window.open(`/users/export${query}`, '_blank', 'noopener=yes');
+};
+
+const printCurrent = () => {
+    triggerPrint();
+};
 
 const destroy = async (user: UserSummary) => {
     const accepted = await confirmDialog({
@@ -104,29 +175,24 @@ const statTone = (tone?: string) => {
 
     <AppLayout :breadcrumbs="[{ title: 'Users', href: '/users' }]">
     <div class="space-y-6">
-        <div class="liquidGlass-wrapper">
-            <span class="liquidGlass-inner-shine" aria-hidden="true" />
-            <div class="liquidGlass-content flex flex-col gap-4 px-5 py-5 md:flex-row md:items-center md:justify-between">
-                <div>
-                    <h1 class="text-2xl font-semibold text-slate-900 dark:text-slate-100">
-                        User management
-                    </h1>
-                    <p class="text-sm text-slate-600 dark:text-slate-300">
-                        Manage access controls, roles, and permissions for your team.
-                    </p>
-                </div>
+        <ResourceToolbar
+            title="User management"
+            description="Manage access controls, roles, and permissions for your team."
+            :create-route="can.create ? '/users/create' : undefined"
+            :show-create="can.create"
+            @export="exportCsv"
+            @print="printCurrent"
+        />
 
-                <div v-if="can.create" class="flex items-center gap-2">
-                    <GlassButton as="span">
-                        <Link href="/users/create" class="flex items-center gap-2">
-                            <span>New user</span>
-                        </Link>
-                    </GlassButton>
-                </div>
-            </div>
+        <div class="hidden print:block text-center text-slate-800">
+            <img src="/images/asset-logo.svg" alt="Asset Management" class="mx-auto mb-3 h-12 w-auto print-logo" />
+            <h1 class="text-xl font-semibold">Asset Management</h1>
+            <p class="text-sm">User Directory</p>
+            <p class="text-xs text-slate-500">Printed {{ printTimestamp }}</p>
+            <hr class="print-divider" />
         </div>
 
-        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 print:hidden">
             <GlassCard
                 v-for="metric in stats"
                 :key="metric.label"
@@ -143,7 +209,7 @@ const statTone = (tone?: string) => {
             </GlassCard>
         </div>
 
-        <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between print:hidden">
             <div class="search-glass relative w-full max-w-sm">
                 <span class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-slate-400">
                     <Search class="size-4" />
@@ -167,12 +233,13 @@ const statTone = (tone?: string) => {
                     <option :value="10">10</option>
                     <option :value="25">25</option>
                     <option :value="50">50</option>
+                    <option :value="100">100</option>
                 </select>
             </div>
         </div>
 
-        <div class="overflow-hidden rounded-xl border border-slate-200/70 bg-white/70 shadow-sm dark:border-slate-800/60 dark:bg-slate-900/50">
-            <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-800">
+        <div class="overflow-hidden rounded-xl border border-slate-200/70 bg-white/70 shadow-sm dark:border-slate-800/60 dark:bg-slate-900/50 print:border print:bg-white print:shadow-none">
+            <table class="min-w-full divide-y divide-slate-200 print-table dark:divide-slate-800">
                 <thead class="bg-slate-50/80 dark:bg-slate-900/80">
                     <tr>
                         <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
@@ -187,12 +254,12 @@ const statTone = (tone?: string) => {
                         <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                             Staff
                         </th>
-                        <th class="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                        <th class="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 print:hidden">
                             Actions
                         </th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-slate-200 bg-white/90 dark:divide-slate-800 dark:bg-slate-950/40">
+                <tbody class="divide-y divide-slate-200 bg-white/90 print:bg-white dark:divide-slate-800 dark:bg-slate-950/40">
                     <tr v-if="!hasResults">
                         <td colspan="5" class="px-6 py-8 text-center text-sm text-slate-500 dark:text-slate-300">
                             No users found. Create your first account to get started.
@@ -201,7 +268,12 @@ const statTone = (tone?: string) => {
                     <tr v-for="user in users" v-else :key="user.id" class="hover:bg-slate-50/70 dark:hover:bg-slate-900/50">
                         <td class="px-5 py-4 text-sm text-slate-700 dark:text-slate-200">
                             <div class="font-medium text-slate-900 dark:text-slate-100">
-                                {{ user.name }}
+                                <Link
+                                    :href="`/users/${user.id}`"
+                                    class="transition hover:text-indigo-600 dark:hover:text-indigo-300"
+                                >
+                                    {{ user.name }}
+                                </Link>
                             </div>
                             <div class="text-xs text-slate-500 dark:text-slate-400">
                                 {{ user.email }}
@@ -253,26 +325,35 @@ const statTone = (tone?: string) => {
                             </span>
                         </td>
 
-                        <td class="px-5 py-4 text-right text-sm">
+                        <td class="px-5 py-4 text-right text-sm print:hidden">
                             <div class="flex justify-end gap-2">
-                                <GlassButton
-                                    v-if="can.edit"
-                                    size="sm"
-                                    as="span"
+                                <Link
+                                    :href="`/users/${user.id}`"
+                                    class="inline-flex items-center rounded-md p-2 text-slate-500 transition hover:bg-slate-100 hover:text-indigo-600 dark:text-slate-300 dark:hover:bg-slate-800/70 dark:hover:text-indigo-300"
+                                    title="View user"
                                 >
-                                    <Link :href="`/users/${user.id}/edit`">
-                                        Edit
-                                    </Link>
-                                </GlassButton>
-                                <GlassButton
+                                    <Eye class="size-4" />
+                                    <span class="sr-only">View</span>
+                                </Link>
+                                <Link
+                                    v-if="can.edit"
+                                    :href="`/users/${user.id}/edit`"
+                                    class="inline-flex items-center rounded-md p-2 text-slate-500 transition hover:bg-slate-100 hover:text-indigo-600 dark:text-slate-300 dark:hover:bg-slate-800/70 dark:hover:text-indigo-300"
+                                    title="Edit user"
+                                >
+                                    <Edit3 class="size-4" />
+                                    <span class="sr-only">Edit</span>
+                                </Link>
+                                <button
                                     v-if="can.delete"
-                                    size="sm"
-                                    class="bg-red-500/10 text-red-600 hover:bg-red-500/20 dark:bg-red-500/20 dark:text-red-200"
                                     type="button"
+                                    class="inline-flex items-center rounded-md p-2 text-red-500 transition hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-500/10"
+                                    title="Delete user"
                                     @click="destroy(user)"
                                 >
-                                    Delete
-                                </GlassButton>
+                                    <Trash2 class="size-4" />
+                                    <span class="sr-only">Delete</span>
+                                </button>
                             </div>
                         </td>
                     </tr>
@@ -280,9 +361,77 @@ const statTone = (tone?: string) => {
             </table>
         </div>
 
-        <div class="flex items-center justify-end">
+        <div class="flex items-center justify-end print:hidden">
             <Pagination :links="paginationLinks" />
         </div>
     </div>
     </AppLayout>
 </template>
+
+<style>
+@media print {
+    @page {
+        size: A4 landscape;
+        margin: 1.5cm;
+    }
+
+    body {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        background-color: #ffffff !important;
+        color: #0f172a !important;
+        height: auto !important;
+    }
+
+    .print-logo {
+        max-height: 48px;
+    }
+
+    .print-divider {
+        border: 0;
+        border-top: 1px solid #cbd5f5;
+        margin: 1rem auto 1.5rem;
+        width: 100%;
+    }
+
+    .print-table {
+        width: 100% !important;
+        border-collapse: collapse !important;
+    }
+
+    .print-table thead tr {
+        background-color: #f8fafc !important;
+    }
+
+    .print-table th,
+    .print-table td {
+        border: 1px solid #e2e8f0 !important;
+        padding: 6px 8px !important;
+        font-size: 12px !important;
+        color: #0f172a !important;
+        background-color: #ffffff !important;
+    }
+
+    .min-h-screen {
+        min-height: auto !important;
+    }
+
+    main {
+        page-break-after: avoid;
+    }
+
+    .liquidGlass-wrapper,
+    .liquidGlass-content {
+        background: #ffffff !important;
+        box-shadow: none !important;
+    }
+
+    .liquidGlass-inner-shine {
+        display: none !important;
+    }
+
+    .app-sidebar {
+        display: none !important;
+    }
+}
+</style>

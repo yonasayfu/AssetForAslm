@@ -8,6 +8,9 @@ use App\Http\Resources\ActivityLogResource;
 use App\Models\ActivityLog;
 use App\Models\Staff;
 use App\Models\User;
+use App\Support\Exports\ExportConfig;
+use App\Support\Exports\HandlesDataExport;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -19,27 +22,30 @@ use Spatie\Permission\Models\Role;
 
 class UserManagementController extends Controller
 {
+    use HandlesDataExport;
     public function index(Request $request): Response
     {
         $this->ensureCanManageUsers();
 
         $search = trim((string) $request->query('search', ''));
-        $perPage = $request->integer('per_page', 10);
+        $allowedPerPage = [5, 10, 25, 50, 100];
+        $perPage = $request->integer('per_page', 5);
+        if (! in_array($perPage, $allowedPerPage, true)) {
+            $perPage = 5;
+        }
+        $sort = $this->resolveSort($request);
+        $direction = $request->query('direction', 'asc') === 'desc' ? 'desc' : 'asc';
 
-        $users = User::query()
-            ->with([
-                'roles:id,name',
-                'permissions:id,name',
-                'staff:id,first_name,last_name,email,status,user_id',
-            ])
-            ->when($search !== '', function ($query) use ($search) {
-                $query->where(function ($builder) use ($search) {
-                    $builder
-                        ->where('name', 'like', "%{$search}%")
-                        ->orWhere('email', 'like', "%{$search}%");
-                });
-            })
-            ->orderBy('name')
+        $query = User::query()->with([
+            'roles:id,name',
+            'permissions:id,name',
+            'staff:id,first_name,last_name,email,status,user_id',
+        ]);
+
+        $this->applySearch($query, $search);
+        $this->applySorting($query, $request);
+
+        $users = $query
             ->paginate($perPage)
             ->withQueryString()
             ->through(function (User $user) {
@@ -65,7 +71,7 @@ class UserManagementController extends Controller
             'stats' => [
                 [
                     'label' => 'Total Users',
-                    'value' => $users->count(),
+                    'value' => $users->total(),
                     'tone' => 'primary',
                 ],
                 [
@@ -82,6 +88,8 @@ class UserManagementController extends Controller
             'filters' => [
                 'search' => $search,
                 'per_page' => $perPage,
+                'sort' => $sort,
+                'direction' => $direction,
             ],
             'can' => [
                 'create' => $request->user()->can('users.manage'),
@@ -91,6 +99,17 @@ class UserManagementController extends Controller
             'breadcrumbs' => [
                 ['title' => 'Users', 'href' => route('users.index')],
             ],
+            'print' => (bool) $request->boolean('print'),
+        ]);
+    }
+
+    public function export(Request $request)
+    {
+        $this->ensureCanManageUsers();
+
+        return $this->handleExport($request, User::class, ExportConfig::users(), [
+            'label' => 'User Roster',
+            'type' => 'users',
         ]);
     }
 
@@ -106,6 +125,47 @@ class UserManagementController extends Controller
                 ['title' => 'Users', 'href' => route('users.index')],
                 ['title' => 'Create', 'href' => route('users.create')],
             ],
+        ]);
+    }
+
+    public function show(Request $request, User $user): Response
+    {
+        $this->ensureCanManageUsers();
+
+        $user->load([
+            'roles:id,name',
+            'permissions:id,name',
+            'staff:id,first_name,last_name,status,user_id',
+        ]);
+
+        $activity = $user->activityLogs()
+            ->with('causer')
+            ->latest()
+            ->take(20)
+            ->get();
+
+        return Inertia::render('Users/Show', [
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'roles' => $user->roles->pluck('name')->values(),
+                'permissions' => $user->getAllPermissions()->pluck('name')->values(),
+                'has_two_factor' => ! is_null($user->two_factor_secret),
+                'staff' => $user->staff ? [
+                    'id' => $user->staff->id,
+                    'full_name' => $user->staff->full_name,
+                    'status' => $user->staff->status,
+                ] : null,
+                'created_at' => optional($user->created_at)->toDateTimeString(),
+                'updated_at' => optional($user->updated_at)->toDateTimeString(),
+            ],
+            'activity' => ActivityLogResource::collection($activity),
+            'breadcrumbs' => [
+                ['title' => 'Users', 'href' => route('users.index')],
+                ['title' => $user->name, 'href' => route('users.show', $user)],
+            ],
+            'print' => (bool) $request->boolean('print'),
         ]);
     }
 
@@ -245,6 +305,43 @@ class UserManagementController extends Controller
             ->route('users.index')
             ->with('bannerStyle', 'info')
             ->with('banner', 'User removed.');
+    }
+
+    protected function applySearch(Builder $query, ?string $search): void
+    {
+        $term = trim((string) $search);
+
+        if ($term === '') {
+            return;
+        }
+
+        $query->where(function (Builder $builder) use ($term) {
+            $builder
+                ->where('name', 'like', "%{$term}%")
+                ->orWhere('email', 'like', "%{$term}%");
+        });
+    }
+
+    protected function applySorting(Builder $query, Request $request): void
+    {
+        $sort = $this->resolveSort($request);
+        $direction = $request->query('direction', 'asc') === 'desc' ? 'desc' : 'asc';
+
+        if ($sort) {
+            $query->orderBy($sort, $direction);
+
+            return;
+        }
+
+        $query->orderBy('name');
+    }
+
+    protected function resolveSort(Request $request): ?string
+    {
+        $sort = $request->query('sort');
+        $sortable = ['name', 'email', 'created_at'];
+
+        return in_array($sort, $sortable, true) ? $sort : null;
     }
 
     protected function availableRoles(): array

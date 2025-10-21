@@ -14,7 +14,7 @@ import {
 import { dashboard } from '@/routes';
 import { type NavItem } from '@/types';
 import { Link, usePage } from '@inertiajs/vue3';
-import { BookOpen, Folder, LayoutGrid, Shield, UserCog, Users } from 'lucide-vue-next';
+import { BookOpen, Folder, LayoutGrid, Shield, UserCog, Users, Download } from 'lucide-vue-next';
 import { computed } from 'vue';
 import AppLogo from './AppLogo.vue';
 
@@ -32,6 +32,11 @@ const mainNavItems = computed<NavItem[]>(() => {
             title: 'Dashboard',
             href: dashboard(),
             icon: LayoutGrid,
+        },
+        {
+            title: 'Download Center',
+            href: '/exports',
+            icon: Download,
         },
     ];
 

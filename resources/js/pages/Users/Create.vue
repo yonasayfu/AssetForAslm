@@ -52,8 +52,8 @@ const submit = () => {
                         Invite a teammate and assign roles and permissions.
                     </p>
                 </div>
-                <GlassButton as="span" size="sm" class="bg-slate-200/80 text-slate-700 hover:bg-slate-300 dark:bg-slate-800/60 dark:text-slate-200">
-                    <Link href="/users">Back to list</Link>
+                <GlassButton as="span" size="sm" variant="secondary">
+                    <Link href="/users" class="flex items-center gap-2">Back to list</Link>
                 </GlassButton>
             </div>
         </div>
@@ -67,7 +67,7 @@ const submit = () => {
             />
 
             <div class="flex justify-end">
-                <GlassButton type="submit" :disabled="!canSubmit">
+                <GlassButton type="submit" :disabled="!canSubmit" variant="primary">
                     <span v-if="form.processing">Saving...</span>
                     <span v-else>Create user</span>
                 </GlassButton>
