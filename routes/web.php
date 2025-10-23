@@ -1,11 +1,13 @@
 <?php
 
 use App\Http\Controllers\GlobalSearchController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DataExportController;
 use App\Http\Controllers\StaffController;
 use App\Http\Controllers\UserManagementController;
 use App\Http\Controllers\RoleManagementController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\Mailbox\MailpitWebhookController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -13,11 +15,14 @@ Route::get('/', function () {
     return Inertia::render('Welcome');
 })->name('home');
 
+Route::post('mailpit/webhook', MailpitWebhookController::class)
+    ->middleware(['mailpit.signature'])
+    ->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class])
+    ->name('mailpit.webhook');
+
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('global-search', GlobalSearchController::class)->name('global-search');
-    Route::get('dashboard', function () {
-        return Inertia::render('Dashboard');
-    })->name('dashboard');
+    Route::get('dashboard', DashboardController::class)->name('dashboard');
 
     Route::get('exports', [DataExportController::class, 'index'])->name('exports.index');
     Route::get('exports/{export}', [DataExportController::class, 'download'])->name('exports.download');

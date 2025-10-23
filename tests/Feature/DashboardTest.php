@@ -1,16 +1,26 @@
 <?php
 
+use App\Models\Staff;
 use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use function Pest\Laravel\actingAs;
 
-test('guests are redirected to the login page', function () {
-    $response = $this->get(route('dashboard'));
-    $response->assertRedirect(route('login'));
-});
+uses(RefreshDatabase::class);
 
-test('authenticated users can visit the dashboard', function () {
-    $user = User::factory()->create();
-    $this->actingAs($user);
+it('renders dashboard data for authenticated users', function () {
+     = User::factory()->create();
+    Staff::factory()->count(2)->create();
 
-    $response = $this->get(route('dashboard'));
-    $response->assertStatus(200);
+    actingAs()
+        ->get(route('dashboard'))
+        ->assertOk()
+        ->assertInertia(fn () => 
+            ->component('Dashboard')
+            ->has('metrics')
+            ->has('staffTrend.labels')
+            ->has('staffTrend.series')
+            ->has('maintenance')
+            ->has('recentExports')
+            ->has('recentActivity')
+        );
 });

@@ -28,7 +28,7 @@ const showBreadcrumbs = computed(
             variant="lite"
             padding="px-4 py-3 sm:px-6"
             content-class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
-            class="shadow-none"
+            class="shadow-none overflow-visible"
         >
             <div class="flex items-center gap-3">
                 <SidebarTrigger class="btn-glass btn-glass-sm -ml-1" />

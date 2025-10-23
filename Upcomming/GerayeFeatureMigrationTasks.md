@@ -66,13 +66,13 @@
 ### Phase 5 - Notifications and Alerting
 - [x] Adapt notification center (database notifications, unread badge, real-time updates).  
   _Source_: `GERAYE-ORGANIZED.md`, notification components
-- [ ] Configure email notifications (alerts, password resets) and document testing steps.  
-  _Source_: `EMAIL_TESTING_GUIDE.md`
-- [ ] Outline messaging and task requirements for the future boilerplate clone; defer implementation until after the Phase 6 snapshot.  
-  _Source_: `TASK_DELEGATION_ENHANCEMENTS.md`, `MESSAGING_SYSTEM_DOCUMENTATION.md`
+- [x] Configure email notifications (alerts, password resets) and document testing steps.  
+  _Source_: `EMAIL_TESTING_GUIDE.md`, `Upcomming/EmailImplementationGuide.md`
+- [x] Outline messaging and task requirements for the future boilerplate clone; defer implementation until after the Phase 6 snapshot.  
+  _Source_: `TASK_DELEGATION_ENHANCEMENTS.md`, `MESSAGING_SYSTEM_DOCUMENTATION.md`, `Upcomming/MessagingIntegrationGuide.md`
 
 ### Phase 6 – Dashboards, Alerts, and Schedulers
-- [ ] Rebuild dashboard widget system (KPI cards, charts, calendar alerts) using asset KPIs.  
+- [ ] Rebuild dashboard widget system (KPI cards, charts, calendar alerts) using sample KPIs.  
   _Source_: Geraye dashboard components, `MyNewProjectRoadmap.md`
 - [ ] Implement alert job pipeline (maintenance due, warranty expiring, overdue checkout).  
   _Source_: Geraye alert schedulers

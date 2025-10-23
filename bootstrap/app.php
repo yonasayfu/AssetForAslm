@@ -2,6 +2,8 @@
 
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Jobs\Mailbox\PurgeExpiredMailboxMessages;
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -18,6 +20,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
             'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
             'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
+            'mailpit.signature' => \App\Http\Middleware\VerifyMailpitSignature::class,
         ]);
 
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
@@ -27,6 +30,15 @@ return Application::configure(basePath: dirname(__DIR__))
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
         ]);
+    })
+    ->withSchedule(function (Schedule $schedule) {
+        $schedule->job(new PurgeExpiredMailboxMessages())
+            ->dailyAt('02:00')
+            ->onQueue(config('mailbox.queue'));
+
+        $schedule->command('mailpit:sync --limit=100')
+            ->hourly()
+            ->withoutOverlapping();
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //
