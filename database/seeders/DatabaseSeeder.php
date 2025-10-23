@@ -22,6 +22,7 @@ class DatabaseSeeder extends Seeder
             ->create([
                 'name' => 'System Administrator',
                 'email' => 'admin@example.com',
+                'recovery_email' => 'recovery_admin@example.com',
             ]);
 
         $admin->assignRole('Admin');
@@ -90,6 +91,7 @@ class DatabaseSeeder extends Seeder
                 ->create([
                     'name' => $sample['name'],
                     'email' => $sample['email'],
+                    'recovery_email' => 'recovery_' . strtolower(str_replace(' ', '', $sample['role'])) . '@example.com',
                 ]);
 
             $user->assignRole($sample['role']);

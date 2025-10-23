@@ -8,6 +8,7 @@ use App\Http\Controllers\UserManagementController;
 use App\Http\Controllers\RoleManagementController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\Mailbox\MailpitWebhookController;
+use App\Http\Controllers\MailboxController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -15,14 +16,30 @@ Route::get('/', function () {
     return Inertia::render('Welcome');
 })->name('home');
 
-Route::post('mailpit/webhook', MailpitWebhookController::class)
-    ->middleware(['mailpit.signature'])
-    ->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class])
-    ->name('mailpit.webhook');
+if (app()->environment('local')) {
+    Route::post('mailpit/webhook', MailpitWebhookController::class)
+        ->middleware(['mailpit.signature'])
+        ->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class])
+        ->name('mailpit.webhook');
+}
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('global-search', GlobalSearchController::class)->name('global-search');
     Route::get('dashboard', DashboardController::class)->name('dashboard');
+
+    if (app()->environment('local')) {
+        Route::get('mailbox', [MailboxController::class, 'index'])
+            ->name('mailbox.index')
+            ->middleware('permission:mailbox.view');
+
+        Route::get('mailbox/{message}', [MailboxController::class, 'show'])
+            ->name('mailbox.show')
+            ->middleware('permission:mailbox.view');
+
+        Route::post('mailbox/{message}/process', [MailboxController::class, 'process'])
+            ->name('mailbox.process')
+            ->middleware('permission:mailbox.process');
+    }
 
     Route::get('exports', [DataExportController::class, 'index'])->name('exports.index');
     Route::get('exports/{export}', [DataExportController::class, 'download'])->name('exports.download');

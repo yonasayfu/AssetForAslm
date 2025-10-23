@@ -21,17 +21,17 @@ This checklist tracks the end-to-end work for pairing AssetManagement with Mailp
 - [ ] Cover ingestion flow with unit/integration tests.
 
 ## Phase 3 - UI/UX Implementation (Vue Inside AssetManagement)
-- [ ] Build inbox list with filters (status, environment, user, date range).
-- [ ] Implement message detail view (HTML/plain toggle, headers, attachments, audit actions).
-- [ ] Wire password reset workflow UI (open reset link, mark processed, optional MFA prompts).
-- [ ] Add real-time updates or polling for new messages and ensure responsive layout.
-- [ ] Enforce mailbox access control (roles/permissions).
+- [x] Build inbox list with filters (status, environment, user, date range).
+- [x] Implement message detail view (HTML/plain toggle, headers, attachments, audit actions).
+- [x] Wire password reset workflow UI (open reset link, mark processed, optional MFA prompts).
+- [x] Add real-time updates or polling for new messages and ensure responsive layout.
+- [x] Enforce mailbox access control (roles/permissions).
 
 ## Phase 4 - Password Reset Integration & QA
-- [ ] Update password reset flow to log interactions with the Mailbox module.
+- [x] Update password reset flow to log interactions with the Mailbox module.
 - [ ] Write automated feature tests covering reset end-to-end with Mailpit fixtures.
-- [ ] Provide helper commands/scripts for QA to review latest messages.
-- [ ] Document rollback/cleanup steps (purge messages, rotate webhook secrets).
+- [x] Provide helper commands/scripts for QA to fetch latest messages.
+- [x] Document rollback and cleanup procedures (purging messages, regenerating secrets).
 
 ## Phase 5 - Production Hardening & Launch
 - [ ] Configure TLS/HTTPS for Mailpit and Laravel endpoints.

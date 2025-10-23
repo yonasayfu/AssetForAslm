@@ -20,14 +20,20 @@ class RolePermissionSeeder extends Seeder
             'staff.delete',
             'users.manage',
             'roles.manage',
+            'mailbox.view',
+            'mailbox.process',
         ])->map(function (string $name) {
             return Permission::firstOrCreate(
                 ['name' => $name, 'guard_name' => 'web'],
             );
         });
 
+        $adminRole = Role::firstOrCreate(
+            ['name' => 'Admin', 'guard_name' => 'web'],
+        );
+        $adminRole->syncPermissions($permissions->pluck('name')->all());
+
         $roles = [
-            'Admin' => $permissions->pluck('name')->all(),
             'Manager' => [
                 'staff.view',
                 'staff.create',

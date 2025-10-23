@@ -32,9 +32,8 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withSchedule(function (Schedule $schedule) {
-        $schedule->job(new PurgeExpiredMailboxMessages())
-            ->dailyAt('02:00')
-            ->onQueue(config('mailbox.queue'));
+        $schedule->job(new PurgeExpiredMailboxMessages(), env('MAILBOX_QUEUE', 'default'))
+            ->dailyAt('02:00');
 
         $schedule->command('mailpit:sync --limit=100')
             ->hourly()
