@@ -41,6 +41,10 @@ export interface User {
     email: string;
     avatar?: string;
     email_verified_at: string | null;
+    account_status: string;
+    account_type: string;
+    approved_at: string | null;
+    approved_by: string | null;
     created_at: string;
     updated_at: string;
 }

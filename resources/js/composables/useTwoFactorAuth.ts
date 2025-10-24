@@ -1,4 +1,4 @@
-import { qrCode, recoveryCodes, secretKey } from '@/routes/two-factor';
+import { qrCode, recoveryCodes, secretKey, emailRecoveryCodes } from '@/routes/two-factor';
 import { computed, ref } from 'vue';
 
 const fetchJson = async <T>(url: string): Promise<T> => {
@@ -17,6 +17,7 @@ const errors = ref<string[]>([]);
 const manualSetupKey = ref<string | null>(null);
 const qrCodeSvg = ref<string | null>(null);
 const recoveryCodesList = ref<string[]>([]);
+const emailRecoveryCodesList = ref<string[]>([]);
 
 const hasSetupData = computed<boolean>(
     () => qrCodeSvg.value !== null && manualSetupKey.value !== null,
@@ -63,6 +64,7 @@ export const useTwoFactorAuth = () => {
         clearSetupData();
         clearErrors();
         recoveryCodesList.value = [];
+        emailRecoveryCodesList.value = [];
     };
 
     const fetchRecoveryCodes = async (): Promise<void> => {
@@ -74,6 +76,18 @@ export const useTwoFactorAuth = () => {
         } catch {
             errors.value.push('Failed to fetch recovery codes');
             recoveryCodesList.value = [];
+        }
+    };
+
+    const fetchEmailRecoveryCodes = async (): Promise<void> => {
+        try {
+            clearErrors();
+            emailRecoveryCodesList.value = await fetchJson<string[]>(
+                emailRecoveryCodes.url(),
+            );
+        } catch {
+            errors.value.push('Failed to fetch email recovery codes');
+            emailRecoveryCodesList.value = [];
         }
     };
 
@@ -91,6 +105,7 @@ export const useTwoFactorAuth = () => {
         qrCodeSvg,
         manualSetupKey,
         recoveryCodesList,
+        emailRecoveryCodesList,
         errors,
         hasSetupData,
         clearSetupData,
@@ -100,5 +115,6 @@ export const useTwoFactorAuth = () => {
         fetchSetupKey,
         fetchSetupData,
         fetchRecoveryCodes,
+        fetchEmailRecoveryCodes,
     };
 };

@@ -53,6 +53,7 @@ class RolePermissionSeeder extends Seeder
             'ReadOnly' => [
                 'staff.view',
             ],
+            'External' => [],
         ];
 
         foreach ($roles as $roleName => $rolePermissions) {

@@ -20,6 +20,10 @@ interface EditableUser {
     id: number;
     name: string;
     email: string;
+    account_status: string;
+    account_type: string;
+    approved_at: string | null;
+    approved_by: string | null;
     roles: string[];
     permissions: string[];
     staff_id: number | null;
@@ -49,11 +53,31 @@ const props = defineProps<{
     activity: ActivityEntry[];
 }>();
 
+const statusLabels: Record<string, string> = {
+    pending: 'Pending approval',
+    active: 'Active',
+    suspended: 'Suspended',
+};
+const accountTypeLabels: Record<string, string> = {
+    internal: 'Internal',
+    external: 'External',
+};
+
+const formatStatus = (status: string): string => statusLabels[status] ?? status;
+const formatAccountType = (type: string): string => accountTypeLabels[type] ?? type;
+
+const approvedFormatter = new Intl.DateTimeFormat(undefined, {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+});
+
 const form = useForm({
     name: props.user.name,
     email: props.user.email,
     password: '',
     password_confirmation: '',
+    account_status: props.user.account_status,
+    account_type: props.user.account_type,
     roles: [...props.user.roles],
     permissions: [...props.user.permissions],
     staff_id: props.user.staff_id,
@@ -64,6 +88,17 @@ const canSubmit = computed(() => !form.processing);
 const submit = () => {
     form.put(`/users/${props.user.id}`);
 };
+
+const approvalSummary = computed(() => {
+    if (!props.user.approved_at) {
+        return 'Not yet approved';
+    }
+
+    const date = new Date(props.user.approved_at);
+    const formatted = Number.isNaN(date.getTime()) ? props.user.approved_at : approvedFormatter.format(date);
+
+    return props.user.approved_by ? `${formatted} - ${props.user.approved_by}` : formatted;
+});
 
 const destroyUser = async () => {
     const accepted = await confirmDialog({
@@ -111,6 +146,23 @@ const destroyUser = async () => {
                         Delete
                     </GlassButton>
                 </div>
+            </div>
+        </div>
+
+        <div class="rounded-lg border border-slate-200/80 bg-white/80 p-4 text-sm shadow-sm dark:border-slate-700/80 dark:bg-slate-900/60">
+            <p class="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
+                Current access status
+            </p>
+            <div class="mt-2 flex flex-wrap items-center gap-3 text-sm">
+                <span class="inline-flex items-center rounded-full bg-indigo-100 px-3 py-1 text-xs font-semibold text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-100">
+                    {{ formatStatus(props.user.account_status) }}
+                </span>
+                <span class="text-xs text-slate-500 dark:text-slate-400">
+                    {{ formatAccountType(props.user.account_type) }}
+                </span>
+                <span class="text-xs text-slate-400 dark:text-slate-500">
+                    {{ approvalSummary }}
+                </span>
             </div>
         </div>
 

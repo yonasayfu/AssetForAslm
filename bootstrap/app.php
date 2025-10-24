@@ -21,6 +21,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
             'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
             'mailpit.signature' => \App\Http\Middleware\VerifyMailpitSignature::class,
+            'approved' => \App\Http\Middleware\EnsureUserIsApproved::class,
         ]);
 
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);

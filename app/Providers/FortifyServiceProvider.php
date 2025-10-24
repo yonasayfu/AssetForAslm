@@ -18,7 +18,10 @@ class FortifyServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->singleton(
+            \Laravel\Fortify\Actions\EnableTwoFactorAuthentication::class,
+            \App\Actions\Fortify\EnableTwoFactorAuthentication::class,
+        );
     }
 
     /**

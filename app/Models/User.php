@@ -5,8 +5,9 @@ namespace App\Models;
 use App\Models\Concerns\RecordsActivity;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -18,6 +19,13 @@ use Lab404\Impersonate\Services\ImpersonateManager;
 
 class User extends Authenticatable
 {
+    public const STATUS_PENDING = 'pending';
+    public const STATUS_ACTIVE = 'active';
+    public const STATUS_SUSPENDED = 'suspended';
+
+    public const TYPE_EXTERNAL = 'external';
+    public const TYPE_INTERNAL = 'internal';
+
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasApiTokens;
     use HasFactory;
@@ -38,6 +46,10 @@ class User extends Authenticatable
         'password',
         'recovery_email',
         'phone_number',
+        'account_status',
+        'account_type',
+        'approved_at',
+        'approved_by',
     ];
 
     /**
@@ -45,18 +57,17 @@ class User extends Authenticatable
      *
      * @var list<string>
      */
-
-
     protected $appends = [
-            'two_factor_secret',
-             'two_factor_recovery_codes',
-             'is_impersonating',
-             'impersonated_by_name',
-         ];
+        'two_factor_secret',
+        'two_factor_recovery_codes',
+        'is_impersonating',
+        'impersonated_by_name',
+    ];
     protected $hidden = [
         'password',
         'two_factor_secret',
         'two_factor_recovery_codes',
+        'two_factor_email_recovery_codes',
         'remember_token',
     ];
 
@@ -65,6 +76,8 @@ class User extends Authenticatable
     protected array $activityLogAttributes = [
         'name',
         'email',
+        'account_status',
+        'account_type',
     ];
 
     /**
@@ -78,6 +91,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'two_factor_confirmed_at' => 'datetime',
+            'approved_at' => 'datetime',
         ];
     }
 
@@ -86,11 +100,7 @@ class User extends Authenticatable
         /** @var ImpersonateManager $manager */
         $manager = app(ImpersonateManager::class);
 
-        if (!$manager->isImpersonating()) {
-            return false;
-        }
-
-        return $manager->getImpersonatorId() === $this->getKey();
+        return $manager->isImpersonating();
     }
 
     public function getImpersonatedByNameAttribute(): ?string
@@ -136,5 +146,58 @@ class User extends Authenticatable
     public function notificationPreferences(): HasMany
     {
         return $this->hasMany(UserNotificationPreference::class);
+    }
+
+    public function approver(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'approved_by');
+    }
+
+    public function getTwoFactorEmailRecoveryCodesAttribute(?string $value): array
+    {
+        if (! $value) {
+            return [];
+        }
+
+        try {
+            $decoded = json_decode(decrypt($value), true, 512, JSON_THROW_ON_ERROR);
+        } catch (\Throwable $exception) {
+            return [];
+        }
+
+        if (! is_array($decoded)) {
+            return [];
+        }
+
+        return array_values(
+            array_filter($decoded, fn ($code) => is_string($code) && $code !== '')
+        );
+    }
+
+    public function setTwoFactorEmailRecoveryCodesAttribute(?array $codes): void
+    {
+        if (empty($codes)) {
+            $this->attributes['two_factor_email_recovery_codes'] = null;
+
+            return;
+        }
+
+        $normalized = array_values(
+            array_filter($codes, fn ($code) => is_string($code) && $code !== '')
+        );
+
+        if (! $normalized) {
+            $this->attributes['two_factor_email_recovery_codes'] = null;
+
+            return;
+        }
+
+        try {
+            $encoded = json_encode($normalized, JSON_THROW_ON_ERROR);
+        } catch (\JsonException) {
+            $encoded = json_encode($normalized);
+        }
+
+        $this->attributes['two_factor_email_recovery_codes'] = encrypt($encoded);
     }
 }

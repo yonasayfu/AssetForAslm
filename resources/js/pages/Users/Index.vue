@@ -5,7 +5,7 @@ import Pagination from '@/components/Pagination.vue';
 import ResourceToolbar from '@/components/ResourceToolbar.vue';
 import { confirmDialog } from '@/lib/confirm';
 import { useTableFilters } from '@/composables/useTableFilters';
-import { Head, Link, router } from '@inertiajs/vue3';
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { Edit3, Eye, Search, Trash2, UserCog } from 'lucide-vue-next';
 import { computed, onBeforeUnmount, onMounted } from 'vue';
 
@@ -13,6 +13,11 @@ interface UserSummary {
     id: number;
     name: string;
     email: string;
+    account_status: string;
+    account_type: string;
+    approved_at: string | null;
+    approved_by: string | null;
+    is_pending: boolean;
     roles: string[];
     permissions: string[];
     has_two_factor: boolean;
@@ -58,6 +63,49 @@ const props = defineProps<{
     };
     print?: boolean;
 }>();
+
+const statusLabels: Record<string, string> = {
+    pending: 'Pending approval',
+    active: 'Active',
+    suspended: 'Suspended',
+};
+
+const accountTypeLabels: Record<string, string> = {
+    internal: 'Internal',
+    external: 'External',
+};
+
+const statusBadgeClasses: Record<string, string> = {
+    pending: 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-100',
+    active: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100',
+    suspended: 'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-100',
+};
+
+const formatStatus = (status: string): string => statusLabels[status] ?? status;
+const formatAccountType = (type: string): string => accountTypeLabels[type] ?? type;
+const statusBadgeClass = (status: string): string =>
+    `inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${statusBadgeClasses[status] ?? 'bg-slate-200 text-slate-700 dark:bg-slate-800/50 dark:text-slate-200'}`;
+
+const approvedFormatter = new Intl.DateTimeFormat(undefined, {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+});
+const formatApprovedAt = (value: string | null): string => {
+    if (!value) {
+        return '';
+    }
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+        return value;
+    }
+
+    return approvedFormatter.format(date);
+};
+
+const page = usePage<{ auth: { user?: { id: number | null } } }>();
+const currentUserId = computed(() => page.props.auth.user?.id ?? null);
 
 const tableFilters = useTableFilters({
     route: '/users',
@@ -247,6 +295,9 @@ const statTone = (tone?: string) => {
                             User
                         </th>
                         <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                            Status
+                        </th>
+                        <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                             Roles
                         </th>
                         <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
@@ -262,7 +313,7 @@ const statTone = (tone?: string) => {
                 </thead>
                 <tbody class="divide-y divide-slate-200 bg-white/90 print:bg-white dark:divide-slate-800 dark:bg-slate-950/40">
                     <tr v-if="!hasResults">
-                        <td colspan="5" class="px-6 py-8 text-center text-sm text-slate-500 dark:text-slate-300">
+                        <td colspan="6" class="px-6 py-8 text-center text-sm text-slate-500 dark:text-slate-300">
                             No users found. Create your first account to get started.
                         </td>
                     </tr>
@@ -281,6 +332,37 @@ const statTone = (tone?: string) => {
                             </div>
                             <div v-if="user.has_two_factor" class="mt-1 inline-flex items-center rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-200">
                                 2FA enabled
+                            </div>
+                        </td>
+                        <td class="px-5 py-4 text-sm text-slate-700 dark:text-slate-200">
+                            <div class="flex flex-col gap-1">
+                                <span :class="statusBadgeClass(user.account_status)">
+                                    {{ formatStatus(user.account_status) }}
+                                </span>
+                                <span class="text-xs text-slate-500 dark:text-slate-400">
+                                    {{ formatAccountType(user.account_type) }}
+                                </span>
+                                <span
+                                    v-if="user.approved_at"
+                                    class="text-xs text-slate-400 dark:text-slate-500"
+                                >
+                                    Approved {{ formatApprovedAt(user.approved_at) }}
+                                    <template v-if="user.approved_by">
+                                        - {{ user.approved_by }}
+                                    </template>
+                                </span>
+                                <span
+                                    v-else-if="user.account_status === 'suspended'"
+                                    class="text-xs italic text-rose-500 dark:text-rose-300"
+                                >
+                                    Suspended - contact an administrator
+                                </span>
+                                <span
+                                    v-else-if="user.is_pending"
+                                    class="text-xs italic text-slate-400 dark:text-slate-500"
+                                >
+                                    Awaiting staff assignment
+                                </span>
                             </div>
                         </td>
 
@@ -346,8 +428,8 @@ const statTone = (tone?: string) => {
                                     <span class="sr-only">Edit</span>
                                 </Link>
                                 <Link
-                                    v-if="can.impersonate"
-                                    :href="`/impersonate/${user.id}`"
+                                    v-if="can.impersonate && currentUserId !== user.id"
+                                    :href="`/impersonate/take/${user.id}`"
                                     class="inline-flex items-center rounded-md p-2 text-blue-500 transition hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-500/10"
                                     title="Impersonate user"
                                 >

@@ -28,6 +28,10 @@ const props = defineProps<{
         id: number;
         name: string;
         email: string;
+        account_status: string;
+        account_type: string;
+        approved_at: string | null;
+        approved_by: string | null;
         roles: string[];
         permissions: string[];
         has_two_factor: boolean;
@@ -43,6 +47,44 @@ const props = defineProps<{
     breadcrumbs: { title: string; href: string }[];
     print?: boolean;
 }>();
+
+const statusLabels: Record<string, string> = {
+    pending: 'Pending approval',
+    active: 'Active',
+    suspended: 'Suspended',
+};
+const accountTypeLabels: Record<string, string> = {
+    internal: 'Internal',
+    external: 'External',
+};
+const statusBadgeClasses: Record<string, string> = {
+    pending: 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-100',
+    active: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100',
+    suspended: 'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-100',
+};
+
+const formatStatus = (status: string): string => statusLabels[status] ?? status;
+const formatAccountType = (type: string): string => accountTypeLabels[type] ?? type;
+const statusBadgeClass = (status: string): string =>
+    `inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${statusBadgeClasses[status] ?? 'bg-slate-200 text-slate-700 dark:bg-slate-800/40 dark:text-slate-200'}`;
+
+const approvedFormatter = new Intl.DateTimeFormat(undefined, {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+});
+const formatApprovedAt = (value: string | null): string => {
+    if (!value) {
+        return '';
+    }
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+        return value;
+    }
+
+    return approvedFormatter.format(date);
+};
 
 const printMode = computed(() => props.print ?? false);
 let printTimer: number | undefined;
@@ -148,6 +190,29 @@ const printRecord = () => {
                                 <p class="text-xs uppercase tracking-wide text-slate-400 dark:text-slate-500">Two-factor authentication</p>
                                 <p class="font-medium text-slate-900 dark:text-slate-100">
                                     {{ props.user.has_two_factor ? 'Enabled' : 'Disabled' }}
+                                </p>
+                            </div>
+                            <div>
+                                <p class="text-xs uppercase tracking-wide text-slate-400 dark:text-slate-500">Account status</p>
+                                <div class="mt-1 flex flex-wrap items-center gap-2">
+                                    <span :class="statusBadgeClass(props.user.account_status)">
+                                        {{ formatStatus(props.user.account_status) }}
+                                    </span>
+                                    <span class="text-xs text-slate-500 dark:text-slate-400">
+                                        {{ formatAccountType(props.user.account_type) }}
+                                    </span>
+                                </div>
+                                <p
+                                    v-if="props.user.approved_at"
+                                    class="mt-1 text-xs text-slate-400 dark:text-slate-500"
+                                >
+                                    Approved {{ formatApprovedAt(props.user.approved_at) }}
+                                    <template v-if="props.user.approved_by">
+                                        by {{ props.user.approved_by }}
+                                    </template>
+                                </p>
+                                <p v-else class="mt-1 text-xs italic text-slate-400 dark:text-slate-500">
+                                    Awaiting approval
                                 </p>
                             </div>
                             <div class="grid grid-cols-2 gap-3 text-xs text-slate-500 dark:text-slate-400">

@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -27,6 +28,8 @@ class UserUpdateRequest extends FormRequest
                 Rule::unique('users', 'email')->ignore($userId),
             ],
             'password' => ['nullable', 'string', 'min:8', 'max:255', 'confirmed'],
+            'account_status' => ['required', Rule::in([User::STATUS_PENDING, User::STATUS_ACTIVE, User::STATUS_SUSPENDED])],
+            'account_type' => ['required', Rule::in([User::TYPE_INTERNAL, User::TYPE_EXTERNAL])],
             'roles' => ['sometimes', 'array'],
             'roles.*' => ['string', Rule::exists('roles', 'name')],
             'permissions' => ['sometimes', 'array'],
@@ -35,4 +38,3 @@ class UserUpdateRequest extends FormRequest
         ];
     }
 }
-

@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
 
@@ -31,6 +32,10 @@ class UserFactory extends Factory
             'two_factor_secret' => Str::random(10),
             'two_factor_recovery_codes' => Str::random(10),
             'two_factor_confirmed_at' => now(),
+            'account_status' => User::STATUS_ACTIVE,
+            'account_type' => User::TYPE_INTERNAL,
+            'approved_at' => now(),
+            'approved_by' => null,
         ];
     }
 

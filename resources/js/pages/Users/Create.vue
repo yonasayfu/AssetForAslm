@@ -24,6 +24,8 @@ const form = useForm({
     email: '',
     password: '',
     password_confirmation: '',
+    account_status: 'active',
+    account_type: 'internal',
     roles: [] as string[],
     permissions: [] as string[],
     staff_id: null as number | null,

@@ -17,8 +17,21 @@ class NotificationController extends Controller
     {
         $user = $request->user();
 
+        $notifications = $user->notifications()
+            ->latest()
+            ->paginate(15)
+            ->through(function (DatabaseNotification $notification) {
+                return [
+                    'id' => $notification->id,
+                    'type' => $notification->type,
+                    'data' => $notification->data,
+                    'read_at' => optional($notification->read_at)->toIso8601String(),
+                    'created_at' => optional($notification->created_at)->toIso8601String(),
+                ];
+            });
+
         return Inertia::render('Notifications/Index', [
-            'notifications' => $user->notifications()->paginate(15),
+            'notifications' => $notifications,
         ]);
     }
 
@@ -28,10 +41,23 @@ class NotificationController extends Controller
     public function getUnread(Request $request): \Illuminate\Http\JsonResponse
     {
         $user = $request->user();
+        $unread = $user->unreadNotifications()
+            ->latest()
+            ->take(10)
+            ->get()
+            ->map(function (DatabaseNotification $notification) {
+                return [
+                    'id' => $notification->id,
+                    'type' => $notification->type,
+                    'data' => $notification->data,
+                    'read_at' => optional($notification->read_at)->toIso8601String(),
+                    'created_at' => optional($notification->created_at)->toIso8601String(),
+                ];
+            });
 
         return response()->json([
             'unread_count' => $user->unreadNotifications()->count(),
-            'notifications' => $user->unreadNotifications()->take(10)->get(),
+            'notifications' => $unread,
         ]);
     }
 

@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
+use Lab404\Impersonate\Services\ImpersonateManager;
 
 class HandleInertiaRequests extends Middleware
 {
@@ -37,6 +38,10 @@ class HandleInertiaRequests extends Middleware
     public function share(Request $request): array
     {
         [$message, $author] = str(Inspiring::quotes()->random())->explode('-');
+        $impersonateManager = app(ImpersonateManager::class);
+        $isImpersonating = $impersonateManager->isImpersonating();
+        $impersonator = $isImpersonating ? $impersonateManager->getImpersonator() : null;
+        $impersonatedUser = $isImpersonating ? $request->user() : null;
 
         return [
             ...parent::share($request),
@@ -57,6 +62,19 @@ class HandleInertiaRequests extends Middleware
                         ? ($request->user()->can('roles.manage') || $request->user()->can('users.manage'))
                         : false,
                 ],
+            ],
+            'impersonation' => [
+                'active' => $isImpersonating,
+                'impersonator' => $impersonator ? [
+                    'id' => $impersonator->getKey(),
+                    'name' => $impersonator->name,
+                    'email' => $impersonator->email,
+                ] : null,
+                'target' => $impersonatedUser ? [
+                    'id' => $impersonatedUser->getKey(),
+                    'name' => $impersonatedUser->name,
+                    'email' => $impersonatedUser->email,
+                ] : null,
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];

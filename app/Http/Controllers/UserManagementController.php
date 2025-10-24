@@ -40,6 +40,7 @@ class UserManagementController extends Controller
             'roles:id,name',
             'permissions:id,name',
             'staff:id,first_name,last_name,email,status,user_id',
+            'approver:id,name',
         ]);
 
         $this->applySearch($query, $search);
@@ -53,6 +54,11 @@ class UserManagementController extends Controller
                     'id' => $user->id,
                     'name' => $user->name,
                     'email' => $user->email,
+                    'account_status' => $user->account_status,
+                    'account_type' => $user->account_type,
+                    'approved_at' => optional($user->approved_at)->toIso8601String(),
+                    'approved_by' => $user->approver?->name,
+                    'is_pending' => $user->account_status === User::STATUS_PENDING,
                     'roles' => $user->roles->pluck('name')->values(),
                     'permissions' => $user->getAllPermissions()->pluck('name')->values(),
                     'has_two_factor' => ! is_null($user->two_factor_secret),
@@ -65,6 +71,7 @@ class UserManagementController extends Controller
             });
 
         $staffLinkedCount = Staff::whereNotNull('user_id')->count();
+        $pendingCount = User::where('account_status', User::STATUS_PENDING)->count();
 
         return Inertia::render('Users/Index', [
             'users' => $users,
@@ -84,6 +91,11 @@ class UserManagementController extends Controller
                     'value' => Role::count(),
                     'tone' => 'muted',
                 ],
+                [
+                    'label' => 'Pending Approval',
+                    'value' => $pendingCount,
+                    'tone' => 'primary',
+                ],
             ],
             'filters' => [
                 'search' => $search,
@@ -95,6 +107,7 @@ class UserManagementController extends Controller
                 'create' => $request->user()->can('users.manage'),
                 'edit' => $request->user()->can('users.manage'),
                 'delete' => $request->user()->can('users.manage'),
+                'impersonate' => $request->user()->can('users.impersonate'),
             ],
             'breadcrumbs' => [
                 ['title' => 'Users', 'href' => route('users.index')],
@@ -136,6 +149,7 @@ class UserManagementController extends Controller
             'roles:id,name',
             'permissions:id,name',
             'staff:id,first_name,last_name,status,user_id',
+            'approver:id,name',
         ]);
 
         $activity = $user->activityLogs()
@@ -149,6 +163,10 @@ class UserManagementController extends Controller
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
+                'account_status' => $user->account_status,
+                'account_type' => $user->account_type,
+                'approved_at' => optional($user->approved_at)->toIso8601String(),
+                'approved_by' => $user->approver?->name,
                 'roles' => $user->roles->pluck('name')->values(),
                 'permissions' => $user->getAllPermissions()->pluck('name')->values(),
                 'has_two_factor' => ! is_null($user->two_factor_secret),
@@ -175,12 +193,19 @@ class UserManagementController extends Controller
 
         DB::transaction(function () use ($request) {
             $data = $request->validated();
+            $status = $data['account_status'];
+            $accountType = $data['account_type'];
+            $isActive = $status === User::STATUS_ACTIVE;
 
             $user = User::create([
                 'name' => $data['name'],
                 'email' => $data['email'],
                 'password' => Hash::make($data['password']),
                 'email_verified_at' => now(),
+                'account_status' => $status,
+                'account_type' => $accountType,
+                'approved_at' => $isActive ? now() : null,
+                'approved_by' => $isActive ? $request->user()->id : null,
             ]);
 
             $user->syncRoles($data['roles'] ?? []);
@@ -199,7 +224,7 @@ class UserManagementController extends Controller
     {
         $this->ensureCanManageUsers();
 
-        $user->load(['roles:id,name', 'permissions:id,name', 'staff:id']);
+        $user->load(['roles:id,name', 'permissions:id,name', 'staff:id', 'approver:id,name']);
 
         $activity = $user->activityLogs()
             ->with('causer')
@@ -212,6 +237,10 @@ class UserManagementController extends Controller
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
+                'account_status' => $user->account_status,
+                'account_type' => $user->account_type,
+                'approved_at' => optional($user->approved_at)->toIso8601String(),
+                'approved_by' => $user->approver?->name,
                 'roles' => $user->roles->pluck('name')->values(),
                 'permissions' => $user->getAllPermissions()->pluck('name')->values(),
                 'staff_id' => $user->staff?->id,
@@ -233,20 +262,40 @@ class UserManagementController extends Controller
 
         $oldRoles = $user->roles->pluck('name')->sort()->values()->toArray();
         $oldPermissions = $user->getAllPermissions()->pluck('name')->sort()->values()->toArray();
+        $oldStatus = $user->account_status;
+        $oldType = $user->account_type;
+        $oldApprovedAt = $user->approved_at;
 
         $newRoles = $oldRoles;
         $newPermissions = $oldPermissions;
+        $newStatus = $oldStatus;
+        $newType = $oldType;
+        $newApprovedAt = $oldApprovedAt;
 
-        DB::transaction(function () use ($request, $user, &$newRoles, &$newPermissions) {
+        DB::transaction(function () use ($request, $user, &$newRoles, &$newPermissions, &$newStatus, &$newType, &$newApprovedAt) {
             $data = $request->validated();
+            $status = $data['account_status'];
+            $accountType = $data['account_type'];
 
             $payload = [
                 'name' => $data['name'],
                 'email' => $data['email'],
+                'account_status' => $status,
+                'account_type' => $accountType,
             ];
 
             if (! empty($data['password'])) {
                 $payload['password'] = Hash::make($data['password']);
+            }
+
+            if ($user->account_status !== $status) {
+                if ($status === User::STATUS_ACTIVE) {
+                    $payload['approved_at'] = now();
+                    $payload['approved_by'] = $request->user()->id;
+                } else {
+                    $payload['approved_at'] = null;
+                    $payload['approved_by'] = null;
+                }
             }
 
             $user->update($payload);
@@ -259,6 +308,9 @@ class UserManagementController extends Controller
             $user->refresh()->load('roles');
             $newRoles = $user->roles->pluck('name')->sort()->values()->toArray();
             $newPermissions = $user->getAllPermissions()->pluck('name')->sort()->values()->toArray();
+            $newStatus = $user->account_status;
+            $newType = $user->account_type;
+            $newApprovedAt = $user->approved_at;
         });
 
         if ($oldRoles !== $newRoles || $oldPermissions !== $newPermissions) {
@@ -275,6 +327,27 @@ class UserManagementController extends Controller
                     'after' => [
                         'roles' => $newRoles,
                         'permissions' => $newPermissions,
+                    ],
+                ]
+            );
+        }
+
+        if ($oldStatus !== $newStatus || $oldType !== $newType) {
+            ActivityLog::record(
+                auth()->id(),
+                $user->fresh(),
+                'user.account_status.updated',
+                'Account status updated',
+                [
+                    'before' => [
+                        'status' => $oldStatus,
+                        'type' => $oldType,
+                        'approved_at' => optional($oldApprovedAt)->toDateTimeString(),
+                    ],
+                    'after' => [
+                        'status' => $newStatus,
+                        'type' => $newType,
+                        'approved_at' => optional($newApprovedAt)->toDateTimeString(),
                     ],
                 ]
             );
