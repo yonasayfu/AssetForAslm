@@ -1,183 +1,70 @@
-++ resources/js/pages/Notifications/Index.vue
-<script setup lang="ts">
-import AppLayout from '@/layouts/AppLayout.vue';
-import GlassButton from '@/components/GlassButton.vue';
-import GlassCard from '@/components/GlassCard.vue';
-import { Head, Link } from '@inertiajs/vue3';
+<script setup>
+import { Head, Link, router } from '@inertiajs/vue3';
+import { computed } from 'vue';
 import axios from 'axios';
-import { ref } from 'vue';
-import { AlertCircle, CheckCircle2, Info, MessageSquare } from 'lucide-vue-next';
 
-interface NotificationPayload {
-    id: string;
-    type: string;
-    data: {
-        sender_name?: string;
-        message_preview?: string;
-        title?: string;
-        body?: string;
-        url?: string | null;
-    };
-    read_at: string | null;
-    created_at: string;
-}
+const props = defineProps({
+    notifications: Object, // Paginated notifications
+});
 
-const props = defineProps<{
-    notifications: NotificationPayload[];
-    unread_count: number;
-}>();
-
-const notifications = ref<NotificationPayload[]>(props.notifications ?? []);
-const unreadCount = ref<number>(props.unread_count ?? 0);
-const isMarkingAll = ref(false);
-const isMarkingSingle = ref<string | null>(null);
-
-const resolveIcon = (type: string) => {
-    const lower = type.toLowerCase();
-
-    if (lower.includes('message')) return MessageSquare;
-    if (lower.includes('task')) return CheckCircle2;
-    if (lower.includes('alert') || lower.includes('warning')) return AlertCircle;
-
-    return Info;
-};
-
-const summaryLine = (notification: NotificationPayload) =>
-    notification.data?.message_preview ??
-    notification.data?.body ??
-    'Tap to view details.';
-
-const headline = (notification: NotificationPayload) =>
-    notification.data?.sender_name ??
-    notification.data?.title ??
-    'Notification';
-
-const markAsRead = async (notification: NotificationPayload) => {
-    if (notification.read_at) {
-        navigate(notification);
-        return;
-    }
-
+const markAsRead = async (notificationId) => {
     try {
-        isMarkingSingle.value = notification.id;
-        await axios.post(`/notifications/${notification.id}/read`);
-
-        notification.read_at = new Date().toISOString();
-        unreadCount.value = Math.max(0, unreadCount.value - 1);
-    } finally {
-        isMarkingSingle.value = null;
-        navigate(notification);
+        await axios.post(route('notifications.markAsRead', notificationId));
+        router.reload({ only: ['notifications'] }); // Refresh notifications
+    } catch (error) {
+        console.error('Error marking notification as read:', error);
     }
 };
 
-const markAllRead = async () => {
-    if (unreadCount.value === 0) {
-        return;
-    }
-
+const markAllAsRead = async () => {
     try {
-        isMarkingAll.value = true;
-        await axios.post('/notifications/read-all');
-        notifications.value = notifications.value.map((notification) => ({
-            ...notification,
-            read_at: notification.read_at ?? new Date().toISOString(),
-        }));
-        unreadCount.value = 0;
-    } finally {
-        isMarkingAll.value = false;
+        await axios.post(route('notifications.markAllRead'));
+        router.reload({ only: ['notifications'] }); // Refresh notifications
+    } catch (error) {
+        console.error('Error marking all notifications as read:', error);
     }
 };
 
-const navigate = (notification: NotificationPayload) => {
-    if (!notification.data?.url) {
-        return;
-    }
-
-    window.location.href = notification.data.url;
-};
+const unreadNotifications = computed(() => props.notifications.data.filter(n => !n.read_at));
 </script>
 
 <template>
     <Head title="Notifications" />
 
-    <AppLayout :breadcrumbs="[{ title: 'Notifications', href: '/notifications' }]">
-        <div class="space-y-6">
-            <GlassCard variant="lite" content-class="flex flex-col gap-3 justify-between md:flex-row md:items-center">
-                <div>
-                    <h1 class="text-2xl font-semibold text-slate-900 dark:text-slate-100">
-                        Notifications
-                    </h1>
-                    <p class="text-sm text-slate-600 dark:text-slate-300">
-                        Stay updated with alert, task, and message activity across the team.
-                    </p>
-                </div>
-                <div class="flex gap-2">
-                    <GlassButton
-                        v-if="unreadCount > 0"
-                        variant="secondary"
-                        size="sm"
-                        type="button"
-                        :disabled="isMarkingAll"
-                        @click="markAllRead"
-                    >
-                        Mark all read
-                    </GlassButton>
-                    <GlassButton
-                        as="span"
-                        variant="primary"
-                        size="sm"
-                    >
-                        <Link href="/settings/profile" class="flex items-center gap-2">
-                            Manage preferences
-                        </Link>
-                    </GlassButton>
-                </div>
-            </GlassCard>
+    <!-- Assuming a layout is applied externally -->
+    <div class="p-6 md:p-10">
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-3xl font-bold text-gray-800">Notifications</h1>
+            <button v-if="unreadNotifications.length > 0" @click="markAllAsRead" class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600">Mark All As Read</button>
+        </div>
 
-            <GlassCard variant="lite" padding="p-0">
-                <div class="overflow-hidden rounded-xl border border-slate-200/70 bg-white/80 dark:border-slate-800/60 dark:bg-slate-900/60">
-                    <ul v-if="notifications.length" class="divide-y divide-slate-200/70 dark:divide-slate-800/70">
-                        <li
-                            v-for="notification in notifications"
-                            :key="notification.id"
-                            class="flex flex-col gap-2 px-5 py-4 text-sm transition hover:bg-slate-50/70 dark:hover:bg-slate-800/60 sm:flex-row sm:items-start sm:justify-between"
-                        >
-                            <div class="flex items-start gap-3">
-                                <div class="mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-indigo-500/10 text-indigo-500 dark:bg-indigo-500/20">
-                                    <component :is="resolveIcon(notification.type)" class="h-5 w-5" />
-                                </div>
-                                <div class="space-y-1">
-                                    <p class="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                                        {{ headline(notification) }}
-                                    </p>
-                                    <p class="text-sm text-slate-600 dark:text-slate-300">
-                                        {{ summaryLine(notification) }}
-                                    </p>
-                                    <p class="text-xs text-slate-400 dark:text-slate-500">
-                                        {{ new Date(notification.created_at).toLocaleString() }}
-                                    </p>
-                                </div>
-                            </div>
-                            <div class="flex items-center gap-2 self-end sm:self-start">
-                                <GlassButton
-                                    size="sm"
-                                    variant="secondary"
-                                    type="button"
-                                    :disabled="isMarkingSingle === notification.id"
-                                    @click="markAsRead(notification)"
-                                >
-                                    <span v-if="notification.read_at">View</span>
-                                    <span v-else-if="isMarkingSingle === notification.id">Marking…</span>
-                                    <span v-else>Mark read</span>
-                                </GlassButton>
-                            </div>
-                        </li>
-                    </ul>
-                    <div v-else class="px-5 py-12 text-center text-sm text-slate-500 dark:text-slate-400">
-                        You don’t have any notifications yet. Invite your team or enable alerts to start receiving updates.
+        <div class="bg-white rounded-lg shadow-md overflow-hidden">
+            <div v-if="notifications.data.length === 0" class="p-6 text-gray-500">
+                You don't have any notifications yet.
+            </div>
+            <div v-else>
+                <div v-for="notification in notifications.data" :key="notification.id" class="border-b last:border-b-0 p-4 hover:bg-gray-50" :class="{ 'bg-blue-50': !notification.read_at }">
+                    <div class="flex justify-between items-center">
+                        <Link :href="notification.data.url || '#'" @click="!notification.read_at && markAsRead(notification.id)" class="flex-grow">
+                            <p class="font-semibold" :class="{ 'text-gray-800': !notification.read_at, 'text-gray-600': notification.read_at }">
+                                {{ notification.data.message }}
+                            </p>
+                            <span class="text-xs text-gray-500">{{ new Date(notification.created_at).toLocaleString() }}</span>
+                        </Link>
+                        <button v-if="!notification.read_at" @click="markAsRead(notification.id)" class="ml-4 px-3 py-1 text-sm bg-gray-200 rounded-full hover:bg-gray-300">Mark as Read</button>
                     </div>
                 </div>
-            </GlassCard>
+            </div>
         </div>
-    </AppLayout>
+
+        <!-- Pagination -->
+        <div v-if="notifications.links.length > 3" class="mt-6 flex justify-center">
+            <div class="flex flex-wrap -mb-1">
+                <template v-for="(link, key) in notifications.links">
+                    <div v-if="link.url === null" :key="key" class="mr-1 mb-1 px-4 py-3 text-sm leading-4 text-gray-400 border rounded" v-html="link.label" />
+                    <Link v-else :key="`link-${key}`" class="mr-1 mb-1 px-4 py-3 text-sm leading-4 border rounded hover:bg-white focus:border-indigo-500 focus:text-indigo-500" :class="{ 'bg-white': link.active }" :href="link.url" v-html="link.label" />
+                </template>
+            </div>
+        </div>
+    </div>
 </template>

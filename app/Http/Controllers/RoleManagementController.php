@@ -68,6 +68,14 @@ class RoleManagementController extends Controller
         $role->syncPermissions($data['permissions'] ?? []);
         app(PermissionRegistrar::class)->forgetCachedPermissions();
 
+        ActivityLog::record(
+            auth()->id(),
+            $role,
+            'created',
+            'Role "' . $role->name . '" created',
+            ['name' => $role->name, 'permissions' => $data['permissions'] ?? []]
+        );
+
         return redirect()
             ->route('roles.index')
             ->with('bannerStyle', 'success')
@@ -104,9 +112,32 @@ class RoleManagementController extends Controller
             'permissions.*' => ['string', 'exists:permissions,name'],
         ]);
 
+        $oldName = $role->name;
+        $oldPermissions = $role->permissions->pluck('name')->toArray();
+
         $role->update(['name' => $data['name']]);
         $role->syncPermissions($data['permissions'] ?? []);
         app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+        $changes = [];
+        if ($oldName !== $role->name) {
+            $changes['name'] = ['old' => $oldName, 'new' => $role->name];
+        }
+
+        $newPermissions = $role->permissions->pluck('name')->toArray();
+        if ($oldPermissions !== $newPermissions) {
+            $changes['permissions'] = ['old' => $oldPermissions, 'new' => $newPermissions];
+        }
+
+        if (!empty($changes)) {
+            ActivityLog::record(
+                auth()->id(),
+                $role,
+                'updated',
+                'Role "' . $role->name . '" updated',
+                $changes
+            );
+        }
 
         return redirect()
             ->route('roles.index')
@@ -124,8 +155,17 @@ class RoleManagementController extends Controller
                 ->with('banner', 'The base Admin role cannot be removed.');
         }
 
+        $roleName = $role->name;
         $role->delete();
         app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+        ActivityLog::record(
+            auth()->id(),
+            $role,
+            'deleted',
+            'Role "' . $roleName . '" deleted',
+            ['name' => $roleName]
+        );
 
         return redirect()
             ->route('roles.index')

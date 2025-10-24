@@ -11,22 +11,27 @@ use Inertia\Response;
 class NotificationController extends Controller
 {
     /**
-     * Return unread notifications for the authenticated user.
+     * Display a listing of the resource.
      */
-    public function index(Request $request): Response|\Illuminate\Http\JsonResponse
+    public function index(Request $request): Response
     {
         $user = $request->user();
 
-        if ($request->wantsJson() || $request->ajax()) {
-            return response()->json([
-                'unread_count' => $user->unreadNotifications()->count(),
-                'notifications' => $user->unreadNotifications()->take(10),
-            ]);
-        }
-
         return Inertia::render('Notifications/Index', [
+            'notifications' => $user->notifications()->paginate(15),
+        ]);
+    }
+
+    /**
+     * Return unread notifications for the authenticated user.
+     */
+    public function getUnread(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $user = $request->user();
+
+        return response()->json([
             'unread_count' => $user->unreadNotifications()->count(),
-            'notifications' => $user->unreadNotifications()->take(25),
+            'notifications' => $user->unreadNotifications()->take(10)->get(),
         ]);
     }
 

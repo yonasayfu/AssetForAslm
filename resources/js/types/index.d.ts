@@ -46,3 +46,25 @@ export interface User {
 }
 
 export type BreadcrumbItemType = BreadcrumbItem;
+
+export interface ActivityLogChange {
+    old?: unknown;
+    new?: unknown;
+}
+
+export interface ActivityLog {
+    id: number;
+    causer_id: number | null;
+    causer: {
+        id: number;
+        name: string;
+        email?: string | null;
+    } | null;
+    action: string;
+    description: string | null;
+    subject_type: string;
+    subject_id: number | string | null;
+    changes: Record<string, ActivityLogChange | null> | null;
+    created_at: string;
+    updated_at: string;
+}

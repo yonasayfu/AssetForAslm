@@ -4,6 +4,8 @@ namespace App\Providers;
 
 use App\Models\Staff;
 use App\Policies\StaffPolicy;
+use App\Models\ActivityLog;
+use App\Policies\ActivityLogPolicy;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -26,6 +28,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Gate::policy(Staff::class, StaffPolicy::class);
+        Gate::policy(ActivityLog::class, ActivityLogPolicy::class);
 
         RateLimiter::for('mailpit', function (Request $request) {
             return [

@@ -9,6 +9,8 @@ use App\Http\Controllers\RoleManagementController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\Mailbox\MailpitWebhookController;
 use App\Http\Controllers\MailboxController;
+use App\Http\Controllers\NotificationPreferenceController;
+use App\Http\Controllers\ActivityLogController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -26,6 +28,16 @@ if (app()->environment('local')) {
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('global-search', GlobalSearchController::class)->name('global-search');
     Route::get('dashboard', DashboardController::class)->name('dashboard');
+
+    Route::get('/user/two-factor-authentication', function () {
+        return Inertia::render('Profile/TwoFactorAuthentication');
+    })->name('profile.two-factor-authentication');
+
+    // Notification Preferences Routes
+    Route::get('/profile/notification-preferences', [NotificationPreferenceController::class, 'index'])
+        ->name('profile.notification-preferences.index');
+    Route::post('/profile/notification-preferences', [NotificationPreferenceController::class, 'update'])
+        ->name('profile.notification-preferences.update');
 
     if (app()->environment('local')) {
         Route::get('mailbox', [MailboxController::class, 'index'])
@@ -47,8 +59,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Notifications
     Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::get('notifications/unread', [NotificationController::class, 'getUnread'])->name('notifications.unread');
     Route::post('notifications/{notification}/read', [NotificationController::class, 'markAsRead'])->name('notifications.markAsRead');
     Route::post('notifications/read-all', [NotificationController::class, 'markAllRead'])->name('notifications.markAllRead');
+
+    Route::get('activity-logs', [ActivityLogController::class, 'index'])->name('activity-logs.index');
 
     Route::middleware('permission:staff.view')->group(function () {
         Route::get('staff', [StaffController::class, 'index'])->name('staff.index');

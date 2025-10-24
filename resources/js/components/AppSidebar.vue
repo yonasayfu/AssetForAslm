@@ -14,9 +14,17 @@ import {
 import { dashboard } from '@/routes';
 import { type NavItem } from '@/types';
 import { Link, usePage } from '@inertiajs/vue3';
-import { BookOpen, Folder, LayoutGrid, Shield, UserCog, Users, Download } from 'lucide-vue-next';
+import { BookOpen, Folder, LayoutGrid, Shield, UserCog, Users, Download, ScrollText } from 'lucide-vue-next';
 import { computed } from 'vue';
 import AppLogo from './AppLogo.vue';
+
+interface Props {
+    class?: string;
+}
+
+withDefaults(defineProps<Props>(), {
+    class: '',
+});
 
 const page = usePage<{
     auth: {
@@ -37,6 +45,11 @@ const mainNavItems = computed<NavItem[]>(() => {
             title: 'Download Center',
             href: '/exports',
             icon: Download,
+        },
+        {
+            title: 'Activity Logs',
+            href: '/activity-logs',
+            icon: ScrollText,
         },
     ];
 
@@ -99,7 +112,7 @@ const footerNavItems: NavItem[] = [
 </script>
 
 <template>
-    <Sidebar collapsible="icon" variant="inset" class="app-sidebar">
+    <Sidebar collapsible="icon" variant="inset" class="app-sidebar" :class="class">
         <SidebarHeader>
             <SidebarMenu>
                 <SidebarMenuItem>

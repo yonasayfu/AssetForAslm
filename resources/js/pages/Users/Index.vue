@@ -6,7 +6,7 @@ import ResourceToolbar from '@/components/ResourceToolbar.vue';
 import { confirmDialog } from '@/lib/confirm';
 import { useTableFilters } from '@/composables/useTableFilters';
 import { Head, Link, router } from '@inertiajs/vue3';
-import { Edit3, Eye, Search, Trash2 } from 'lucide-vue-next';
+import { Edit3, Eye, Search, Trash2, UserCog } from 'lucide-vue-next';
 import { computed, onBeforeUnmount, onMounted } from 'vue';
 
 interface UserSummary {
@@ -54,6 +54,7 @@ const props = defineProps<{
         create: boolean;
         edit: boolean;
         delete: boolean;
+        impersonate: boolean;
     };
     print?: boolean;
 }>();
@@ -343,6 +344,15 @@ const statTone = (tone?: string) => {
                                 >
                                     <Edit3 class="size-4" />
                                     <span class="sr-only">Edit</span>
+                                </Link>
+                                <Link
+                                    v-if="can.impersonate"
+                                    :href="`/impersonate/${user.id}`"
+                                    class="inline-flex items-center rounded-md p-2 text-blue-500 transition hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-500/10"
+                                    title="Impersonate user"
+                                >
+                                    <UserCog class="size-4" />
+                                    <span class="sr-only">Impersonate</span>
                                 </Link>
                                 <button
                                     v-if="can.delete"

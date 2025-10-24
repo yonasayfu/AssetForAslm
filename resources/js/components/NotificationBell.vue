@@ -1,203 +1,77 @@
-<script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue';
+<script setup>
+import { ref, onMounted, computed } from 'vue';
 import { Link, router } from '@inertiajs/vue3';
-import axios from 'axios';
-import { AlertCircle, Bell, CheckCircle2, Info, MessageSquare } from 'lucide-vue-next';
+import axios from 'axios'; // Assuming axios is available globally or imported
 
-interface NotificationPayload {
-    id: string;
-    type: string;
-    data: {
-        sender_name?: string;
-        message_preview?: string;
-        url?: string | null;
-        type?: string;
-        title?: string;
-        body?: string;
-    };
-    read_at: string | null;
-}
+const notifications = ref([]);
+const showDropdown = ref(false);
 
-const notifications = ref<NotificationPayload[]>([]);
-const unreadCount = ref(0);
-const isOpen = ref(false);
-const triggerRef = ref<HTMLButtonElement | null>(null);
-const dropdownRef = ref<HTMLDivElement | null>(null);
-let pollingInterval: number | null = null;
+const unreadCount = computed(() => notifications.value.filter(n => !n.read_at).length);
 
 const fetchNotifications = async () => {
     try {
-        const response = await axios.get('/notifications', { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
-
-        notifications.value = response.data.notifications ?? [];
-        unreadCount.value = response.data.unread_count ?? 0;
+        const response = await axios.get('/notifications/unread');
+        notifications.value = Array.isArray(response.data) ? response.data : [];
     } catch (error) {
-        console.error('Failed to fetch notifications', error);
+        console.error('Error fetching notifications:', error);
     }
 };
 
-const markAsRead = async (notificationId: string) => {
+const markAsRead = async (notificationId) => {
     try {
         await axios.post(`/notifications/${notificationId}/read`);
-
-        const target = notifications.value.find(({ id }) => id === notificationId);
-        if (target && !target.read_at) {
-            target.read_at = new Date().toISOString();
-            unreadCount.value = Math.max(0, unreadCount.value - 1);
-        }
+        await fetchNotifications(); // Refresh notifications
     } catch (error) {
-        console.error('Failed to mark notification as read', error);
+        console.error('Error marking notification as read:', error);
     }
 };
 
 const markAllRead = async () => {
-    if (!unreadCount.value) {
-        return;
-    }
-
     try {
         await axios.post('/notifications/read-all');
-        notifications.value = notifications.value.map((notification) => ({
-            ...notification,
-            read_at: notification.read_at ?? new Date().toISOString(),
-        }));
-        unreadCount.value = 0;
+        await fetchNotifications(); // Refresh notifications
     } catch (error) {
-        console.error('Failed to mark all notifications as read', error);
-    }
-};
-
-const resolveIcon = (type: string) => {
-    const lower = type.toLowerCase();
-
-    if (lower.includes('message')) return MessageSquare;
-    if (lower.includes('task')) return CheckCircle2;
-    if (lower.includes('alert') || lower.includes('warning')) return AlertCircle;
-
-    return Info;
-};
-
-const handleNotificationClick = async (notification: NotificationPayload) => {
-    isOpen.value = false;
-
-    const url = notification.data?.url;
-
-    if (url) {
-        router.visit(url, {
-            preserveScroll: true,
-            onFinish: () => markAsRead(notification.id),
-            onError: () => markAsRead(notification.id),
-        });
-
-        return;
-    }
-
-    await markAsRead(notification.id);
-};
-
-const handleDocumentClick = (event: MouseEvent) => {
-    if (!isOpen.value) {
-        return;
-    }
-
-    const target = event.target as Node;
-    const withinTrigger = triggerRef.value?.contains(target);
-    const withinDropdown = dropdownRef.value?.contains(target);
-
-    if (!withinTrigger && !withinDropdown) {
-        isOpen.value = false;
-    }
+        console.error('Error marking all notifications as read:', error);
+    }d
 };
 
 onMounted(() => {
     fetchNotifications();
-    pollingInterval = window.setInterval(fetchNotifications, 30_000);
-    document.addEventListener('click', handleDocumentClick);
+    // Optional: Poll for new notifications or use WebSockets
+    // setInterval(fetchNotifications, 30000); // Example polling
 });
 
-onUnmounted(() => {
-    if (pollingInterval) {
-        window.clearInterval(pollingInterval);
+// Close dropdown when clicking outside
+const onClickOutside = (event) => {
+    if (showDropdown.value && !event.target.closest('.notification-bell')) {
+        showDropdown.value = false;
     }
-
-    document.removeEventListener('click', handleDocumentClick);
-});
+};
+// Add and remove event listener manually
+onMounted(() => document.addEventListener('click', onClickOutside));
+// onUnmounted(() => document.removeEventListener('click', onClickOutside)); // Not needed if component is always mounted
 </script>
 
 <template>
-    <div class="relative">
-        <button
-            ref="triggerRef"
-            type="button"
-            class="relative flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-white/40 text-slate-600 shadow-sm transition hover:bg-white/70 dark:border-slate-700/40 dark:bg-slate-800/50 dark:text-slate-200 dark:hover:bg-slate-700/70"
-            @click="isOpen = !isOpen"
-            aria-label="Notifications"
-        >
-            <Bell class="h-5 w-5" />
-            <span
-                v-if="unreadCount > 0"
-                class="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-[11px] font-semibold text-white shadow"
-            >
-                {{ unreadCount }}
-            </span>
+    <div class="relative notification-bell">
+        <button @click="showDropdown = !showDropdown" class="relative p-2 text-gray-600 hover:text-gray-800 focus:outline-none">
+            <!-- Bell Icon (replace with actual icon) -->
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
+            <span v-if="unreadCount > 0" class="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-red-100 bg-red-600 rounded-full">{{ unreadCount }}</span>
         </button>
 
-        <div
-            v-if="isOpen"
-            ref="dropdownRef"
-            class="absolute right-0 z-40 mt-3 w-80 overflow-hidden rounded-xl border border-white/30 bg-white/85 shadow-xl backdrop-blur-lg transition dark:border-slate-700/50 dark:bg-slate-900/80"
-        >
-            <div class="flex items-center justify-between border-b border-white/30 bg-white/70 px-4 py-3 text-sm font-semibold text-slate-700 dark:border-slate-700/40 dark:bg-slate-900/60 dark:text-slate-100">
-                <span>Notifications</span>
-                <button
-                    v-if="unreadCount > 0"
-                    type="button"
-                    class="text-xs font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-300 dark:hover:text-indigo-200"
-                    @click="markAllRead"
-                >
-                    Mark all read
-                </button>
-            </div>
-
-            <div class="max-h-96 overflow-y-auto">
-                <div
-                    v-if="notifications.length > 0"
-                    class="divide-y divide-white/20 dark:divide-slate-700/30"
-                >
-                    <button
-                        v-for="notification in notifications"
-                        :key="notification.id"
-                        type="button"
-                        class="flex w-full items-start gap-3 px-4 py-3 text-left transition hover:bg-white/60 dark:hover:bg-slate-800/60"
-                        :class="{ 'opacity-70': notification.read_at }"
-                        @click="handleNotificationClick(notification)"
-                    >
-                        <div class="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-indigo-500/10 text-indigo-500 dark:bg-indigo-500/20">
-                            <component :is="resolveIcon(notification.type)" class="h-5 w-5" />
-                        </div>
-                        <div class="min-w-0 flex-1 space-y-1">
-                            <p class="text-sm font-medium text-slate-900 dark:text-slate-100">
-                                {{ notification.data?.sender_name ?? notification.data?.title ?? 'Notification' }}
-                            </p>
-                            <p class="text-xs text-slate-600 dark:text-slate-300">
-                                {{ notification.data?.message_preview ?? notification.data?.body ?? 'Tap to view details.' }}
-                            </p>
-                        </div>
-                    </button>
-                </div>
-                <div v-else class="px-4 py-6 text-center text-sm text-slate-500 dark:text-slate-400">
-                    You're all caught up.
-                </div>
-            </div>
-
-            <div class="border-t border-white/20 bg-white/60 px-4 py-2 text-right text-xs dark:border-slate-700/40 dark:bg-slate-900/60">
-                <Link
-                    href="/notifications"
-                    class="font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-300 dark:hover:text-indigo-200"
-                    @click="isOpen = false"
-                >
-                    View all notifications
-                </Link>
+        <div v-if="showDropdown" class="absolute right-0 mt-2 w-80 bg-white rounded-md shadow-lg z-10">
+            <div class="py-1">
+                <div v-if="notifications.length === 0" class="px-4 py-2 text-sm text-gray-500">No new notifications.</div>
+                <template v-else>
+                    <Link v-for="notification in notifications.slice(0, 5)" :key="notification.id" :href="notification.data.url || '#'" @click="markAsRead(notification.id); showDropdown = false" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" :class="{ 'font-bold bg-blue-50': !notification.read_at }">
+                        {{ notification.data.message }}
+                        <span class="block text-xs text-gray-500">{{ new Date(notification.created_at).toLocaleString() }}</span>
+                    </Link>
+                    <div class="border-t border-gray-200 mt-1"></div>
+                    <Link href="/notifications" class="block px-4 py-2 text-sm text-indigo-600 hover:bg-gray-100">View All Notifications</Link>
+                    <button v-if="unreadCount > 0" @click="markAllRead(); showDropdown = false" class="block w-full text-left px-4 py-2 text-sm text-indigo-600 hover:bg-gray-100">Mark All As Read</button>
+                </template>
             </div>
         </div>
     </div>
