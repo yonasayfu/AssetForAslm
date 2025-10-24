@@ -14,7 +14,16 @@ import {
 import { dashboard } from '@/routes';
 import { type NavItem } from '@/types';
 import { Link, usePage } from '@inertiajs/vue3';
-import { BookOpen, Folder, LayoutGrid, Shield, UserCog, Users, Download, ScrollText } from 'lucide-vue-next';
+import {
+    BookOpen,
+    Download,
+    Folder,
+    LayoutGrid,
+    ScrollText,
+    Shield,
+    UserCog,
+    Users,
+} from 'lucide-vue-next';
 import { computed } from 'vue';
 import AppLogo from './AppLogo.vue';
 
@@ -30,71 +39,58 @@ const page = usePage<{
     auth: {
         permissions: string[];
     };
+    navigation?: {
+        sidebar?: Array<{
+            label?: string | null;
+            items: Array<NavItem & { icon?: string }>;
+        }>;
+    };
 }>();
 
-const mainNavItems = computed<NavItem[]>(() => {
-    const auth = page.props.auth ?? {};
+const iconMap: Record<string, unknown> = {
+    LayoutGrid,
+    Download,
+    ScrollText,
+    Users,
+    UserCog,
+    Shield,
+};
 
-    const items: NavItem[] = [
-        {
-            title: 'Dashboard',
-            href: dashboard(),
-            icon: LayoutGrid,
-        },
-        {
-            title: 'Download Center',
-            href: '/exports',
-            icon: Download,
-        },
-        {
-            title: 'Activity Logs',
-            href: '/activity-logs',
-            icon: ScrollText,
-        },
-    ];
-
-    const canViewStaff =
-        auth.can?.viewStaff ??
-        auth.permissions?.includes?.('staff.view') ??
-        false;
-
-    if (canViewStaff) {
-        items.push({
-            title: 'Staff',
-            href: '/staff',
-            icon: Users,
-        });
+const hasPermission = (permission: string | null | undefined, permissions: string[] = []) => {
+    if (!permission) {
+        return true;
     }
 
-    const canManageUsers =
-        auth.can?.manageUsers ??
-        auth.permissions?.includes?.('users.manage') ??
-        false;
+    return permissions.includes(permission);
+};
 
-    if (canManageUsers) {
-        items.push({
-            title: 'Users',
-            href: '/users',
-            icon: UserCog,
-        });
-    }
+const sidebarGroups = computed(() => {
+    const permissions = page.props.auth?.permissions ?? [];
+    const groups = page.props.navigation?.sidebar ?? [];
 
-    const canManageRoles =
-        auth.can?.manageRoles ??
-        auth.permissions?.includes?.('roles.manage') ??
-        auth.permissions?.includes?.('users.manage') ??
-        false;
+    return groups
+        .map((group) => {
+            const items = (group.items ?? [])
+                .filter((item) => hasPermission(item.permission ?? null, permissions))
+                .map((item) => ({
+                    ...item,
+                    href: item.href === '/dashboard' ? dashboard() : item.href,
+                    icon:
+                        typeof item.icon === 'string' && iconMap[item.icon]
+                            ? iconMap[item.icon]
+                            : item.icon,
+                }));
 
-    if (canManageRoles) {
-        items.push({
-            title: 'Roles',
-            href: '/roles',
-            icon: Shield,
-        });
-    }
+            if (!items.length) {
+                return null;
+            }
 
-    return items;
-    
+            return {
+                label: group.label ?? null,
+                items,
+            };
+        })
+        .filter(Boolean);
 });
 
 const footerNavItems: NavItem[] = [
@@ -126,7 +122,7 @@ const footerNavItems: NavItem[] = [
         </SidebarHeader>
 
         <SidebarContent>
-            <NavMain :items="mainNavItems" />
+            <NavMain :groups="sidebarGroups" />
         </SidebarContent>
 
         <SidebarFooter>

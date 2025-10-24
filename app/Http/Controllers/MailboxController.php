@@ -71,7 +71,11 @@ class MailboxController extends Controller
             'note' => 'nullable|string|max:1000',
         ]);
 
-        $message->update(['status' => 'processed']);
+        $message->update([
+            'status' => 'processed',
+            'processed_by' => $request->user()->id,
+            'processed_at' => now(),
+        ]);
 
         $message->events()->create([
             'user_id' => auth()->id(),

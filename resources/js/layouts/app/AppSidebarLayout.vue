@@ -4,6 +4,7 @@ import AppShell from '@/components/AppShell.vue';
 import AppSidebar from '@/components/AppSidebar.vue';
 import AppSidebarHeader from '@/components/AppSidebarHeader.vue';
 import NotificationBell from '@/components/NotificationBell.vue';
+import ThemeToggle from '@/components/ThemeToggle.vue';
 import type { BreadcrumbItemType } from '@/types';
 import { Link, usePage } from '@inertiajs/vue3';
 import { computed } from 'vue';
@@ -47,6 +48,7 @@ const impersonatorName = computed(() => impersonation.value?.impersonator?.name 
                     <AppSidebarHeader :breadcrumbs="breadcrumbs" class="print:hidden">
                         <template #actions>
                             <div class="flex items-center gap-2">
+                                <ThemeToggle />
                                 <NotificationBell />
                             </div>
                         </template>

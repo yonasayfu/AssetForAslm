@@ -1,0 +1,171 @@
+openapi: 3.0.3
+info:
+  title: Asset Management API
+  version: 1.0.0
+servers:
+  - url: https://api.example.com/api/v1
+paths:
+  /auth/login:
+    post:
+      summary: Issue an access token
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                device_name:
+                  type: string
+      responses:
+        "200":
+          description: Token issued
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                  token_type:
+                    type: string
+                  user:
+                    $ref: '#/components/schemas/User'
+        "422":
+          description: Invalid credentials
+  /auth/profile:
+    get:
+      summary: Retrieve the authenticated profile
+      security:
+        - bearerAuth: []
+      tags: [Auth]
+      responses:
+        "200":
+          description: Profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+  /auth/logout:
+    post:
+      summary: Revoke the current access token
+      security:
+        - bearerAuth: []
+      tags: [Auth]
+      responses:
+        "200":
+          description: Logged out
+  /notifications:
+    get:
+      summary: List notifications
+      security:
+        - bearerAuth: []
+      tags: [Notifications]
+      parameters:
+        - in: query
+          name: per_page
+          schema:
+            type: integer
+        - in: query
+          name: unread_only
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: Notifications
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedNotifications'
+  /users/summary:
+    get:
+      summary: List user summaries
+      security:
+        - bearerAuth: []
+      tags: [Users]
+      parameters:
+        - in: query
+          name: per_page
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Users
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedUsers'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: Token
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        account_status:
+          type: string
+        account_type:
+          type: string
+        roles:
+          type: array
+          items:
+            type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    Notification:
+      type: object
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+        data:
+          type: object
+        read_at:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+    PaginatedNotifications:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Notification'
+        meta:
+          type: object
+        links:
+          type: object
+    PaginatedUsers:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/User'
+        meta:
+          type: object
+        links:
+          type: object

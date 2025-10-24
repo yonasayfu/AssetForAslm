@@ -76,6 +76,9 @@ class HandleInertiaRequests extends Middleware
                     'email' => $impersonatedUser->email,
                 ] : null,
             ],
+            'navigation' => [
+                'sidebar' => config('sidebar.groups', []),
+            ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
     }

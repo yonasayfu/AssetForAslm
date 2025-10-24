@@ -35,6 +35,19 @@ This document outlines additional "must-have" features to enhance the AssetManag
     2.  Implement logging for these actions using the existing `RecordsActivity` trait or custom log entries.
     3.  Build UI for viewing activity logs (e.g., a dedicated "Audit Log" page with filters).
 
+### Activity Logging Matrix
+
+| Area | Events Covered | Notes |
+| --- | --- | --- |
+| Users | Create/update/delete, role & permission changes, staff linking | `User` model uses `RecordsActivity`; controller logs role/permission diffs |
+| Staff | Create/update/delete, user association updates | `Staff` model uses `RecordsActivity`; `syncStaffAssignment` logs linking moves |
+| Notification Preferences | Enable/disable per channel | `UserNotificationPreference` model records changes so support can audit opt-ins |
+| Mailbox Messages | Ingested, status updates (processed, assigned) | `MailboxMessage` records subject/status/environment; ingestion job & UI updates set metadata |
+| Roles & Permissions | Role CRUD, permission assignments | `RoleManagementController` records operations |
+| Authentication | Impersonation start/stop, MFA setup/reset | Logged via impersonation routes and 2FA flows (see Security section) |
+
+> Keep this table updated as new modules adopt activity logging so the audit trail stays comprehensive.
+
 ## 4. User Impersonation (Admin "Login As")
 
 *   **Description**: Allow administrators to temporarily "log in as" another user without knowing their password, for debugging or support purposes.
@@ -45,7 +58,6 @@ This document outlines additional "must-have" features to enhance the AssetManag
     2.  Implement logic to switch user sessions securely.
     3.  Build UI for admins to initiate and end impersonation.
     4.  Ensure robust security checks (only super-admins can impersonate, cannot impersonate other super-admins).
-
 
 
 

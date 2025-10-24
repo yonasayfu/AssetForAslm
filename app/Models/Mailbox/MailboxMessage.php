@@ -2,6 +2,7 @@
 
 namespace App\Models\Mailbox;
 
+use App\Models\Concerns\RecordsActivity;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Casts\AsArrayObject;
 use Illuminate\Database\Eloquent\Casts\AsEncryptedArrayObject;
@@ -16,6 +17,7 @@ class MailboxMessage extends Model
 {
     use HasFactory;
     use HasUlids;
+    use RecordsActivity;
 
     protected $table = 'mailbox_messages';
 
@@ -28,6 +30,16 @@ class MailboxMessage extends Model
         'html_body' => AsEncryptedString::class,
         'text_body' => AsEncryptedString::class,
         'meta' => AsArrayObject::class,
+    ];
+
+    protected string $activityLogLabel = 'Mailbox Message';
+
+    protected array $activityLogAttributes = [
+        'subject',
+        'status',
+        'environment',
+        'processed_by',
+        'processed_at',
     ];
 
     public function recipients(): HasMany

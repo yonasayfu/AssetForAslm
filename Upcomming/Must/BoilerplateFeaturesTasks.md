@@ -1,30 +1,36 @@
 # Boilerplate Features Task Tracker
 
-This document tracks the implementation progress of additional "must-have" features for the AssetManagement boilerplate.
+Use this list to track the remaining polish items for the reusable Laravel/Inertia boilerplate. Everything already shipped (2FA, notifications, Mailpit ingestion, impersonation, etc.) stays documented elsewhere – only the follow-up work appears below.
 
-## 1. Two-Factor Authentication (2FA) for Login
+## 1. Activity Logging & Audit UI
 
-- [x] Enable Fortify's 2FA features in `config/fortify.php`.
-- [x] Build UI for 2FA setup (displaying QR code, confirming setup code).
-- [x] Build UI for 2FA challenge during login.
-- [ ] Test 2FA setup and login with Mailpit (for recovery codes if emailed).
+- [ ] Finalize “activity matrix” (which models/actions must log) and publish in `BoilerplateFeaturesPlan.md`.
+- [ ] Expand `RecordsActivity` coverage to user/staff CRUD, role/permission changes, notification preference edits, and Mailpit ingestion events.
+- [ ] Build the audit log UI (filters, detail drawer) so admins can browse the history.
 
-## 2. Comprehensive Notification Management
+## 2. Navigation & Appearance Enhancements
 
-- [x] Define various notification types (e.g., `NewAssignmentNotification`, `DataExportReadyNotification`).
-- [x] Choose notification channels (database for in-app, email for external).
-- [x] Build UI for displaying in-app notifications (e.g., a notification bell/dropdown).
-- [x] Build UI for managing notification preferences (e.g., "email me for X, don't email me for Y").
+- [ ] Bring over the curated sidebar grouping from Geraye and store it in a single config (used by the Vue sidebar + policy checks).
+- [ ] Add a persistent light/dark theme toggle in the global header (hook into the existing appearance settings so changes sync both ways).
+- [ ] Surface “quick actions” (theme toggle, impersonation leave link, profile dropdown) consistently on every page header.
 
-## 3. Enhanced Activity Logging & Auditing
+## 3. Mobile/API Readiness
 
-- [ ] Identify critical actions across the application (e.g., user creation/update/deletion, role changes, data access).
-- [ ] Implement logging for these actions using the existing `RecordsActivity` trait or custom log entries.
-- [ ] Build UI for viewing activity logs (e.g., a dedicated "Audit Log" page with filters).
+- [ ] Draft `ApiIntegrationGuide.md` that defines versioning, authentication (token + optional OAuth), pagination format, and error envelope.
+- [ ] Ship base API scaffolding: auth endpoints (login, refresh, profile), notification feed, and user management summary – all guarded by Sanctum.
+- [ ] Generate an OpenAPI spec + Postman collection and store them under `docs/api/`.
+- [ ] Add automated API smoke tests (Pest/PHPUnit) for the new endpoints.
 
-## 4. User Impersonation (Admin "Login As")
+## 4. Developer Experience & Tooling
 
-- [ ] Create a route and controller action for impersonation.
-- [ ] Implement logic to switch user sessions securely.
-- [ ] Build UI for admins to initiate and end impersonation.
-- [ ] Ensure robust security checks (only super-admins can impersonate, cannot impersonate other super-admins).
+- [ ] Provide artisan generators for “clean architecture” modules (controller + service + DTO + form request + resource).
+- [ ] Set up default CI pipeline (lint, tests, build) and document it in the README.
+- [ ] Ensure docker-compose/devcontainer configs exist for quick onboarding.
+
+## 5. Optional Enhancements (Prioritize After Core Tasks)
+
+- [ ] Localization scaffold (translation files, helper components, i18n guide).
+- [ ] Observability baseline: logging format, exception handler hooks (Sentry/Bugsnag), `/health` endpoint.
+- [ ] Feature toggle support using Laravel Pennant (document rollout best practices).
+
+Update this tracker as tasks move to “done” so we always know what’s left before the boilerplate graduates to production-ready status.
