@@ -1,0 +1,13 @@
+<?php
+
+namespace {{ namespace }};
+
+use App\Domain\{{ name }}\DTOs\{{ name }}Data;
+
+class {{ class }}Service
+{
+    public function handle({{ name }}Data $data): void
+    {
+        // TODO: implement domain logic
+    }
+}

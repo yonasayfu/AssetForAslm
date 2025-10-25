@@ -1,10 +1,12 @@
 <?php
 
+use App\Console\Commands\MakeModule;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Jobs\Mailbox\PurgeExpiredMailboxMessages;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Application;
+
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
@@ -33,6 +35,7 @@ return Application::configure(basePath: dirname(__DIR__))
             AddLinkHeadersForPreloadedAssets::class,
         ]);
     })
+    ->withBroadcasting(__DIR__.'/../routes/channels.php')
     ->withSchedule(function (Schedule $schedule) {
         $schedule->job(new PurgeExpiredMailboxMessages(), env('MAILBOX_QUEUE', 'default'))
             ->dailyAt('02:00');
@@ -41,6 +44,9 @@ return Application::configure(basePath: dirname(__DIR__))
             ->hourly()
             ->withoutOverlapping();
     })
+    ->withCommands([
+        MakeModule::class,
+    ])
     ->withExceptions(function (Exceptions $exceptions) {
         //
     })->create();

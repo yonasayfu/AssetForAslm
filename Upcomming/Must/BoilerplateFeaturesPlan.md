@@ -24,6 +24,7 @@ This document outlines additional "must-have" features to enhance the AssetManag
     2.  Choose notification channels (database for in-app, email for external).
     3.  Build UI for displaying in-app notifications (e.g., a notification bell/dropdown).
     4.  Build UI for managing notification preferences (e.g., "email me for X, don't email me for Y").
+    5.  Wire real-time broadcast updates using Laravel Reverb so the notification bell receives live events.
 
 ## 3. Enhanced Activity Logging & Auditing
 
@@ -58,6 +59,5 @@ This document outlines additional "must-have" features to enhance the AssetManag
     2.  Implement logic to switch user sessions securely.
     3.  Build UI for admins to initiate and end impersonation.
     4.  Ensure robust security checks (only super-admins can impersonate, cannot impersonate other super-admins).
-
 
 

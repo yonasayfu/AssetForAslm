@@ -10,6 +10,7 @@ use App\Models\Staff;
 use App\Models\User;
 use App\Support\Exports\ExportConfig;
 use App\Support\Exports\HandlesDataExport;
+use App\Support\Users\SyncsStaffAssignment;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -23,6 +24,7 @@ use Spatie\Permission\Models\Role;
 class UserManagementController extends Controller
 {
     use HandlesDataExport;
+    use SyncsStaffAssignment;
     public function index(Request $request): Response
     {
         $this->ensureCanManageUsers();
@@ -451,86 +453,6 @@ class UserManagementController extends Controller
             })
             ->values()
             ->toArray();
-    }
-
-    protected function syncStaffAssignment(User $user, ?int $staffId): void
-    {
-        $previousStaff = $user->staff;
-        $previousStaffId = $previousStaff?->id;
-
-        if ($previousStaff && ($staffId === null || $previousStaffId !== $staffId)) {
-            $previousStaff->user()->dissociate();
-            $previousStaff->save();
-        }
-
-        $currentStaff = null;
-
-        if ($staffId) {
-            if ($previousStaffId === $staffId) {
-                $currentStaff = $previousStaff;
-            } else {
-                $currentStaff = Staff::find($staffId);
-
-                if ($currentStaff) {
-                    $originalUserId = $currentStaff->user_id;
-
-                    if ($originalUserId && $originalUserId !== $user->id) {
-                        $currentStaff->user()->dissociate();
-                        $currentStaff->save();
-                    }
-
-                    $currentStaff->user()->associate($user);
-                    $currentStaff->save();
-
-                    ActivityLog::record(
-                        auth()->id(),
-                        $currentStaff,
-                        'user_link.updated',
-                        'User link updated',
-                        [
-                            'before' => ['user_id' => $originalUserId],
-                            'after' => ['user_id' => $user->id],
-                        ]
-                    );
-                }
-            }
-        }
-
-        if ($previousStaff && $previousStaffId !== $staffId) {
-            ActivityLog::record(
-                auth()->id(),
-                $previousStaff,
-                'user_link.updated',
-                'User link removed',
-                [
-                    'before' => ['user_id' => $user->id],
-                    'after' => ['user_id' => null],
-                ]
-            );
-        }
-
-        $user->unsetRelation('staff');
-
-        if ($staffId && $staffId === $previousStaffId) {
-            $user->setRelation('staff', $previousStaff);
-        } elseif ($currentStaff) {
-            $user->setRelation('staff', $currentStaff);
-        }
-
-        $currentStaffId = $user->staff?->id;
-
-        if ($previousStaffId !== $currentStaffId) {
-            ActivityLog::record(
-                auth()->id(),
-                $user,
-                'staff_link.updated',
-                'Linked staff profile updated',
-                [
-                    'before' => ['staff_id' => $previousStaffId],
-                    'after' => ['staff_id' => $currentStaffId],
-                ]
-            );
-        }
     }
 
     protected function ensureCanManageUsers(): void

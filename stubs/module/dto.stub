@@ -1,0 +1,13 @@
+<?php
+
+namespace {{ namespace }};
+
+use Spatie\LaravelData\Data;
+
+class {{ class }}Data extends Data
+{
+    public function __construct(
+        public string $example,
+    ) {
+    }
+}

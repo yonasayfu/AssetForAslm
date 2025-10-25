@@ -1,0 +1,31 @@
+version: '3.9'
+
+services:
+  app:
+    image: bitnami/laravel:10
+    ports:
+      - '${APP_PORT:-8000}:8000'
+    environment:
+      - DB_HOST=db
+      - DB_PORT=3306
+      - DB_USERNAME=${DB_USERNAME:-sail}
+      - DB_PASSWORD=${DB_PASSWORD:-password}
+    volumes:
+      - .:/app
+    depends_on:
+      - db
+
+  db:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: '${DB_PASSWORD:-password}'
+      MYSQL_DATABASE: '${DB_DATABASE:-asset_boilerplate}'
+      MYSQL_USER: '${DB_USERNAME:-sail}'
+      MYSQL_PASSWORD: '${DB_PASSWORD:-password}'
+    ports:
+      - '33060:3306'
+    volumes:
+      - db-data:/var/lib/mysql
+
+volumes:
+  db-data:

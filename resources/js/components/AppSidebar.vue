@@ -23,6 +23,10 @@ import {
     Shield,
     UserCog,
     Users,
+    ClipboardList,
+    Globe2,
+    MessageCircle,
+    Settings,
 } from 'lucide-vue-next';
 import { computed } from 'vue';
 import AppLogo from './AppLogo.vue';
@@ -54,9 +58,18 @@ const iconMap: Record<string, unknown> = {
     Users,
     UserCog,
     Shield,
+    Folder,
+    BookOpen,
+    ClipboardList,
+    Globe2,
+    MessageCircle,
+    Settings,
 };
 
-const hasPermission = (permission: string | null | undefined, permissions: string[] = []) => {
+const hasPermission = (
+    permission: string | null | undefined,
+    permissions: string[] = [],
+) => {
     if (!permission) {
         return true;
     }
@@ -69,9 +82,11 @@ const sidebarGroups = computed(() => {
     const groups = page.props.navigation?.sidebar ?? [];
 
     return groups
-        .map((group) => {
+        .map((group, index) => {
             const items = (group.items ?? [])
-                .filter((item) => hasPermission(item.permission ?? null, permissions))
+                .filter((item) =>
+                    hasPermission(item.permission ?? null, permissions),
+                )
                 .map((item) => ({
                     ...item,
                     href: item.href === '/dashboard' ? dashboard() : item.href,
@@ -86,7 +101,13 @@ const sidebarGroups = computed(() => {
             }
 
             return {
+                id: group.label ?? `group-${index}`,
                 label: group.label ?? null,
+                icon:
+                    typeof (group as any).icon === 'string' &&
+                    iconMap[(group as any).icon]
+                        ? iconMap[(group as any).icon as string]
+                        : (group as any).icon,
                 items,
             };
         })
@@ -94,21 +115,26 @@ const sidebarGroups = computed(() => {
 });
 
 const footerNavItems: NavItem[] = [
-    {
-        title: 'Github Repo',
-        href: 'https://github.com/laravel/vue-starter-kit',
-        icon: Folder,
-    },
-    {
-        title: 'Documentation',
-        href: 'https://laravel.com/docs/starter-kits#vue',
-        icon: BookOpen,
-    },
+    // {
+    //     title: 'Github Repo',
+    //     href: 'https://github.com/laravel/vue-starter-kit',
+    //     icon: Folder,
+    // },
+    // {
+    //     title: 'Documentation',
+    //     href: 'https://laravel.com/docs/starter-kits#vue',
+    //     icon: BookOpen,
+    // },
 ];
 </script>
 
 <template>
-    <Sidebar collapsible="icon" variant="inset" class="app-sidebar" :class="class">
+    <Sidebar
+        collapsible="icon"
+        variant="inset"
+        class="app-sidebar"
+        :class="class"
+    >
         <SidebarHeader>
             <SidebarMenu>
                 <SidebarMenuItem>

@@ -29,7 +29,7 @@ return new class extends Migration
         DB::table('users')->update([
             'account_status' => 'active',
             'account_type' => 'internal',
-            'approved_at' => DB::raw('COALESCE(approved_at, NOW())'),
+            'approved_at' => DB::raw("COALESCE(approved_at, CURRENT_TIMESTAMP)"),
         ]);
     }
 

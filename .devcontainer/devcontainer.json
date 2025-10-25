@@ -1,0 +1,9 @@
+{
+  "name": "asset-boilerplate",
+  "dockerComposeFile": "../docker-compose.example.yml",
+  "service": "app",
+  "workspaceFolder": "/app",
+  "forwardPorts": [8000],
+  "postCreateCommand": "composer install && npm install",
+  "remoteUser": "laravel"
+}

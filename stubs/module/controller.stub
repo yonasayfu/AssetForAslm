@@ -1,0 +1,36 @@
+<?php
+
+namespace {{ namespace }};
+
+use App\Http\Controllers\Controller;
+use App\Http\Requests\{{ name }}\{{ name }}Request;
+use App\Http\Resources\{{ name }}\{{ name }}Resource;
+use App\Domain\{{ name }}\DTOs\{{ name }}Data;
+use App\Domain\{{ name }}\{{ name }}Service;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+
+class {{ class }}Controller extends Controller
+{
+    public function __construct(
+        protected {{ name }}Service $service
+    ) {
+    }
+
+    public function index(Request $request): JsonResponse
+    {
+        // TODO: return a collection resource
+        return response()->json([
+            'data' => [],
+        ]);
+    }
+
+    public function store({{ name }}Request $request): JsonResponse
+    {
+        $this->service->handle(
+            {{ name }}Data::from($request->validated())
+        );
+
+        return response()->json(status: 201);
+    }
+}
