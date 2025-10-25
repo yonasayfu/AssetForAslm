@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { urlIsActive } from '@/lib/utils';
 import { type NavItem } from '@/types';
@@ -24,24 +24,30 @@ const availableGroups = computed(() =>
 );
 
 const openGroupId = ref<string | null>(null);
+const closingGroupId = ref<string | null>(null);
 
 const hasActiveItem = (group: SidebarGroupConfig) =>
     group.items?.some((item) => urlIsActive(item.href, page.url));
 
 const ensureOpenGroup = (forceDefault = false) => {
-    // If an active link exists, ensure its group is expanded.
     const activeGroup = availableGroups.value.find((group) => hasActiveItem(group));
     if (activeGroup) {
         openGroupId.value = activeGroup.id;
+        closingGroupId.value = null;
         return;
     }
 
-    if (openGroupId.value && availableGroups.value.some((group) => group.id === openGroupId.value)) {
+    if (
+        openGroupId.value &&
+        availableGroups.value.some((group) => group.id === openGroupId.value)
+    ) {
+        closingGroupId.value = null;
         return;
     }
 
     if (forceDefault && availableGroups.value.length > 0) {
         openGroupId.value = availableGroups.value[0].id;
+        closingGroupId.value = null;
     }
 };
 
@@ -59,6 +65,9 @@ watch(
             openGroupId.value = null;
         }
         ensureOpenGroup(true);
+        if (!availableGroups.value.some((group) => group.id === closingGroupId.value)) {
+            closingGroupId.value = null;
+        }
     },
     { immediate: true },
 );
@@ -68,7 +77,25 @@ onMounted(() => {
 });
 
 const toggleGroup = (groupId: string) => {
-    openGroupId.value = openGroupId.value === groupId ? null : groupId;
+    if (openGroupId.value === groupId) {
+        closingGroupId.value = groupId;
+        openGroupId.value = null;
+        return;
+    }
+
+    closingGroupId.value = openGroupId.value;
+    openGroupId.value = groupId;
+};
+
+const isExpanded = (groupId: string) => openGroupId.value === groupId;
+
+const shouldRenderGroup = (groupId: string) =>
+    openGroupId.value === groupId || closingGroupId.value === groupId;
+
+const handleAfterLeave = (groupId: string) => {
+    if (closingGroupId.value === groupId) {
+        closingGroupId.value = null;
+    }
 };
 
 const groupTitle = (group: SidebarGroupConfig, index: number) =>
@@ -86,7 +113,7 @@ const groupTitle = (group: SidebarGroupConfig, index: number) =>
                 type="button"
                 class="flex w-full items-center gap-2 rounded-md px-2 py-2 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 @click="toggleGroup(group.id)"
-                :aria-expanded="openGroupId === group.id"
+                :aria-expanded="isExpanded(group.id)"
             >
                 <div class="flex items-center gap-2 truncate">
                     <component v-if="group.icon" :is="group.icon" class="h-4 w-4 flex-shrink-0" />
@@ -94,7 +121,7 @@ const groupTitle = (group: SidebarGroupConfig, index: number) =>
                 </div>
                 <ChevronRight
                     class="ml-auto h-4 w-4 flex-shrink-0 transition-transform duration-200"
-                    :class="{ 'rotate-90': openGroupId === group.id }"
+                    :class="{ 'rotate-90': isExpanded(group.id) }"
                 />
             </button>
 
@@ -105,9 +132,10 @@ const groupTitle = (group: SidebarGroupConfig, index: number) =>
                 leave-active-class="transition-all duration-150 ease-in"
                 leave-from-class="max-h-96 opacity-100"
                 leave-to-class="max-h-0 opacity-0"
+                @after-leave="handleAfterLeave(group.id)"
             >
                 <div
-                    v-show="openGroupId === group.id"
+                    v-show="shouldRenderGroup(group.id)"
                     class="mt-1 overflow-hidden rounded-md bg-muted/10 pl-1 pr-1"
                 >
                     <SidebarMenu class="space-y-1 px-1 py-1">

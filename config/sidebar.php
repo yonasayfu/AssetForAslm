@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 return [
     'groups' => [
@@ -21,7 +21,7 @@ return [
                     'title' => 'Activity Logs',
                     'href' => '/activity-logs',
                     'icon' => 'ScrollText',
-                    'permission' => null,
+                    'permission' => 'activity-logs.view',
                 ],
             ],
         ],

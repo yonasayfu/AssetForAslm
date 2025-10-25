@@ -127,6 +127,28 @@ Route::middleware('auth')->group(function () {
                 'destroy',
             ]);
         });
+
+        Route::prefix('samples')->name('samples.')->group(function () {
+            Route::get('/', function () {
+                return Inertia::render('samples/Index');
+            })->name('index');
+
+            Route::get('/admin', function () {
+                return Inertia::render('samples/SampleAdminPage');
+            })->middleware('role:Admin')->name('admin');
+
+            Route::get('/manager', function () {
+                return Inertia::render('samples/SampleManagerPage');
+            })->middleware('role:Manager')->name('manager');
+
+            Route::get('/technician', function () {
+                return Inertia::render('samples/SampleTechnicianPage');
+            })->middleware('role:Technician')->name('technician');
+
+            Route::get('/external', function () {
+                return Inertia::render('samples/SampleExternalPage');
+            })->middleware('role:External|ReadOnly')->name('external');
+        });
     });
 });
 
